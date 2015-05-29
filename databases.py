@@ -26,6 +26,9 @@ class MatrixDatabase(BaseDatabase):
     def n_users(self):
         return self.matrix.shape[0]
 
+    def n_items(self):
+        return self.matrix.shape[1]
+
     def get_matrix(self, zero_mean=False, threshold=False):
         if threshold:
             if self.thresholded is None:
@@ -102,7 +105,7 @@ class TestDB(MatrixDatabase):
 
 class HiddenRatingsDatabase(MatrixDatabase):
     def __init__(self, matrix, hidden_coord):
-        self.matrix = matrix.copy()
+        MatrixDatabase.__init__(self, matrix.copy())
         for u, i in hidden_coord:
             self.matrix[u, i] = 0
 

@@ -10,7 +10,8 @@ Test system with TestDB
 """
 
 from databases import TestDB
-from evaluation import kFoldView, kFoldEvaluator
+from evaluation import kFoldView, kFoldEvaluator,\
+    HoldoutRatingsEvaluator, HoldoutRatingsView
 import recommender as rec
 from multiprocessing import Pool
 
@@ -21,22 +22,34 @@ RS_types = [rec.ItemBased, rec.BMFrecommender, rec.BMFRPrecommender]
 
 database = TestDB(10, 40, min_items=0.5)
 kfold_view = kFoldView(database, result_folder, n_folds=2)
+holdout_view = HoldoutRatingsView(database, result_folder,
+                                  pct_hidden=0.2, threshold=4)
 
 def run(i):
     global kfold_view, RS_types, result_folder
     print('Running '+ str(RS_types[i].__name__))
     evalu = kFoldEvaluator(kfold_view, RS_types[i], {}, result_folder,
-                           pct_hidden = 0.2, threshold = 3, topk=10)
+                           pct_hidden=0.2, threshold=3, topk=10)
+    print('Training...')
     evalu.train(force_train=True)
+    print('Done!')
+    print('Testing...')
     evalu.test()
-    evalu = HoldoutRatingsEvaluator()
+    print('Done!')
+    evalu = HoldoutRatingsEvaluator(holdout_view, RS_types[i], {},
+                                    result_folder, threshold=3, topk=10)
+    print('Training...')
+    evalu.train(force_train=True)
+    print('Done!')
+    print('Testing...')
+    evalu.test()
+    print('Done!')
 
-for i in range(len(RS_types)):
-    run(i)
 
-#if PARALLEL:
-#    pool = Pool()
-#    pool.map(run, [i for i in range(len(RS_types))])
-#else:
-#    map(run, [i for i in range(len(RS_types))])
+if PARALLEL:
+    pool = Pool()
+    pool.map(run, [i for i in range(len(RS_types))])
+else:
+    for i in range(len(RS_types)):
+        run(i)
 

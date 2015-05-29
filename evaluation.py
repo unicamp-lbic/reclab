@@ -36,7 +36,7 @@ class Evaluator(object):
         return (u_positives, u_negatives)
 
     @staticmethod
-    def collumns():
+    def columns():
         return ['P','R','F1','MAE','RMSE']
 
 
@@ -101,15 +101,18 @@ class Evaluator(object):
 
 class HoldoutRatingsView(object):
     def __init__(self, database, testset_folder, pct_hidden=0.2, threshold=4):
-
-        HOLDOUT_FILE = testset_folder + '/%d_pct_hidden.pkl' % pct_hidden
+        self.pct_hidden = pct_hidden
+        self.threshold = threshold
+        HOLDOUT_FILE = testset_folder + \
+            '/%d_pct_hidden.pkl' % (100 * pct_hidden)
 
         if os.path.isfile(HOLDOUT_FILE):
             with open(HOLDOUT_FILE, 'rb') as f:
                 self.hidden_coord = load(f)
         else:
             # get positions equal to or above threshold (ratings)
-            row, col = np.where(database.get_matrix() >= threshold)
+            matrix = np.array(database.get_matrix())
+            row, col = np.where(matrix >= threshold)
             n_hidden = np.ceil(pct_hidden*len(row))
             # pick n_hidden random positions
             hidden_idx = np.random.randint(0, len(row), n_hidden)
@@ -119,42 +122,47 @@ class HoldoutRatingsView(object):
                 dump(self.hidden_coord, f)
 
         self.train_set = HiddenRatingsDatabase(database.get_matrix(),
-                                                hidden_coord)
+                                                self.hidden_coord)
         self.test_set =  [(database.get_matrix()[u, i], u, i)
                           for u, i in self.hidden_coord]
 
-class HoldoutRatingsEvaluation(object):
+
+class HoldoutRatingsMetrics(object):
     def __init__(self, RS, test_set, topk, threshold):
         self.test_set = test_set
         self.RS = RS
         self.topk = topk
         self.threshold = threshold
+        self.test_set = test_set
 
     def _metrics_single_rating(self, user_id, item_id, true_rating):
-        unrated = self.RS.database.get_unrated_items(u)
-        candidate_items = choice(unrated, size=1000,
+        unrated = self.RS.database.get_unrated_items(user_id)
+        qtty_candidates = min(np.ceil(0.1*self.RS.database.n_items()), 1000)
+        candidate_items = choice(unrated, size=qtty_candidates,
                                  replace=False).tolist() + [item_id]
 
-        rlist = self.RS.recommend(new_vector, how_many=self.topk,
+        rlist = self.RS.recommend(user_id, how_many=self.topk,
                                   threshold=self.threshold,
                                   candidate_items=candidate_items)
 
         rlist = dict(rlist)
         hit = 1 if item_id in rlist else 0
-        absErr = np.abs(rlist[item_id] - true_rating)
+
+        pred_rating = self.RS.predict(user_id, item_id)
+        absErr = np.abs(pred_rating - true_rating)
 
         return hit, absErr
 
     @staticmethod
-    def collumns():
+    def columns():
         return ['P','R','F1','MAE','RMSE']
 
-    def final_metrics(self):
+    def calc_metrics(self):
         total_hits = 0
         sum_absErr = 0
         sum_sqErr = 0
         for rating, user, item in self.test_set:
-            hit, absErr = self.metrics_single_rating(rating, user, item)
+            hit, absErr = self._metrics_single_rating(rating, user, item)
             total_hits += hit
             sum_absErr += absErr
             sum_sqErr += absErr**2
@@ -172,6 +180,47 @@ class HoldoutRatingsEvaluation(object):
 
         metrics = np.array([precision, recall, F1, MAE, RMSE])
         return metrics
+
+class HoldoutRatingsEvaluator(object):
+    def __init__(self, holdout_view, RS_type, RS_arguments, result_folder,
+                 topk=1, threshold=3):
+        self.RS = RS_type(**RS_arguments)
+
+        if not os.path.isdir(result_folder):
+            os.mkdir(result_folder)
+        self.pct_hidden = holdout_view.pct_hidden
+        self.topk = topk
+        self.threshold = threshold
+        self.fname_prefix = result_folder+'/'+\
+                            '_'.join([RS_type.__name__]+
+                                     [str(arg) for arg in RS_arguments]) \
+                            + '_%d_pct_hidden' % (100 * self.pct_hidden) \
+                            + '_rec_threshold_%d' % self.threshold \
+                            + '_top_%d' % self.topk
+        self.holdout = holdout_view
+
+
+    def train(self, force_train=False):
+        train_file = self.fname_prefix + '_trained.pkl'
+        if os.path.isfile(train_file) and not force_train:
+            with open(train_file, 'rb') as f:
+                self.RS = load(f)
+        else:
+            self.RS.fit(self.holdout.train_set)
+            with open(train_file, 'wb') as f:
+                dump(self.RS, f)
+
+    def test(self):
+        evalu = HoldoutRatingsMetrics(self.RS, self.holdout.test_set, self.topk,
+                                      self.threshold)
+        metrics = evalu.calc_metrics()
+        metrics_labels = evalu.columns()
+        np.savetxt(self.fname_prefix+'_test.txt', metrics.T, delimiter=',',
+                   header=','.join(['"'+l+'"' for l in metrics_labels]))
+
+        return metrics
+
+
 
 class kFoldView(object):
     def __init__(self, database, kfold_folder, n_folds=5, shuffle=True):
@@ -219,7 +268,9 @@ class kFoldEvaluator(object):
         self.fname_prefix = result_folder+'/'+\
                             '_'.join([RS_type.__name__]+
                                      [str(arg) for arg in RS_arguments]) \
-                            + '_%dfolds'%self.n_folds
+                            + '_%dfolds' % self.n_folds \
+                            + '_%0.2f_pct_hidden' % self.pct_hidden \
+                            + 'top_%d_threshold_%d' % (self.topk, self.threshold)
 
     def _train_single_fold(self, i, force_train):
         train_file = self.fname_prefix + '_trained_fold_%d.pkl'%i
@@ -240,7 +291,7 @@ class kFoldEvaluator(object):
                           self.pct_hidden, self.topk,
                           self.threshold)
         metrics = evalu.avg_all_users()
-        self.metrics_labels = evalu.collumns()
+        self.metrics_labels = evalu.columns()
         return metrics
 
     def test(self):
