@@ -39,7 +39,11 @@ class BMF(object):
 
 def bmf(matrix, min_coverage=1.0):
     n, m = matrix.shape
-    remaining_pairs = matrix.copy()
+    if sparse.issparse(matrix):
+        remaining_pairs = sparse.lil_matrix(matrix)
+    else:
+        remaining_pairs = matrix.copy()
+
     max_uncoverage = (1 - min_coverage) * remaining_pairs.sum()
     factors = set()
     while remaining_pairs.sum() > max_uncoverage :
