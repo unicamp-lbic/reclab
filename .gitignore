@@ -1,0 +1,6 @@
+*.pyc
+*.out
+*~
+*#
+__pycache__
+.spyderproject
