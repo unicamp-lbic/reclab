@@ -16,9 +16,13 @@ import recommender as rec
 from multiprocessing import Pool
 from itertools import chain
 import os
+import sys
 
 
-PARALLEL = False
+if 'parallel' in set(sys.argv):
+    PARALLEL = True
+else:
+    PARALLEL = False
 
 result_folder = 'results/exp_1_results/'
 RS_type = rec.BMFrecommender
@@ -40,7 +44,7 @@ holdout_view = HoldoutRatingsView(database, dbread.PATH,
 
 if not os.path.isdir(result_folder):
     os.makedirs(result_folder)
-    
+
 def run(i):
     global kfold_view, RS_type, RS_arguments, result_folder
     print('Running ' + str(RS_arguments[i]))
