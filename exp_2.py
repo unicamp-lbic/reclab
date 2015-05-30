@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu May 21 14:32:12 2015
+Created on Sat May 30 18:33:01 2015
 
 @author: thalita
 
-Experiment 1
+Experiment 2
 
-Reproduce BMF results from Nenova et al (2013)
+Repeat experiment 1 wising LSH forest
+
 """
 
 import data.MovieLens100k.dbread as dbread
@@ -24,7 +25,7 @@ if 'parallel' in set(sys.argv):
 else:
     PARALLEL = False
 
-result_folder = 'results/exp_1_results/'
+result_folder = 'results/exp_2_results/'
 RS_type = rec.BMFrecommender
 
 coverages = [1, 0.8, 0.6]
@@ -32,7 +33,7 @@ coverages = [1, 0.8, 0.6]
 RS_arguments = [{'neighbor_type': 'user',
                  'offline_kNN': offline,
                  'n_neighbors': nn,
-                 'algorithm': 'brute',
+                 'algorithm': 'LSH',
                  'metric': 'cosine',
                  'threshold': t,
                  'min_coverage': coverage}
@@ -50,6 +51,7 @@ holdout_view = HoldoutRatingsView(database, dbread.PATH,
 if not os.path.isdir(result_folder):
     os.makedirs(result_folder)
 
+
 def run(i):
     global kfold_view, RS_type, RS_arguments, result_folder
     min_coverage = RS_arguments[i]['min_coverage']
@@ -66,6 +68,7 @@ def run(i):
     print('Testing ' + str(RS_arguments[i]))
     evalu.test()
     print('Done testing ' + str(RS_arguments[i]))
+
 
 
 if PARALLEL:
