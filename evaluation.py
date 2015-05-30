@@ -103,6 +103,7 @@ class HoldoutRatingsView(object):
     def __init__(self, database, testset_folder, pct_hidden=0.2, threshold=4):
         self.pct_hidden = pct_hidden
         self.threshold = threshold
+        self.folder = testset_folder
         HOLDOUT_FILE = testset_folder + \
             '/%d_pct_hidden.pkl' % (100 * pct_hidden)
 
@@ -220,6 +221,35 @@ class HoldoutRatingsEvaluator(object):
 
         return metrics
 
+class HoldoutBMF(HoldoutRatingsEvaluator):
+    def __init__(self, holdout_view, RS_type, RS_arguments, result_folder,
+                 topk=1, threshold=3):
+        HoldoutRatingsEvaluator.__init__(self, holdout_view, RS_type, RS_arguments,
+                                         result_folder, topk, threshold)
+
+        min_coverage = RS_arguments['min_coverage']
+        self.BMF_file = self.holdout.folder + \
+            'BMF_coverage_%0.2f' % min_coverage + \
+            '_%d_pct_hidden.pkl' % (holdout_view.pct_hidden * 100)
+
+    def train(self, force_train=False):
+        train_file = self.fname_prefix + '_trained.pkl'
+        BMF_file = self.BMF_file
+        if os.path.isfile(train_file) and not force_train:
+            with open(train_file, 'rb') as f:
+                self.RS = load(f)
+        else:
+            if os.path.isfile(BMF_file) and not force_train:
+                with open(BMF_file, 'rb') as f:
+                    P, Q = load(f)
+                self.RS.fit(self.holdout.train_set, P, Q)
+
+            else:
+                self.RS.fit(self.holdout.train_set)
+                with open(BMF_file, 'wb') as f:
+                    dump((self.RS.P, self.RS.Q), f)
+                with open(train_file, 'wb') as f:
+                    dump(self.RS, f)
 
 
 class kFoldView(object):
@@ -308,8 +338,8 @@ class kFoldBMF(kFoldEvaluator):
     def __init__(self, kfold_view, RS_type, RS_arguments, result_folder,
                  pct_hidden=0.2, topk=10, threshold=0):
 
-        kFoldEvaluator.__init__(self, kfold_view, RS_type, RS_arguments, result_folder,
-                 pct_hidden, topk, threshold)
+        kFoldEvaluator.__init__(self, kfold_view, RS_type, RS_arguments,
+                                result_folder, pct_hidden, topk, threshold)
 
         min_coverage = RS_arguments['min_coverage']
         self.BMF_file_prefix = self.kfold_view.kfold_folder + \

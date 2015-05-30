@@ -11,9 +11,9 @@ Reproduce BMF results from Nenova et al (2013)
 
 import data.MovieLens100k.dbread as dbread
 from databases import MatrixDatabase
-from evaluation import HoldoutRatingsEvaluator, HoldoutRatingsView
+from evaluation import HoldoutBMF, HoldoutRatingsView
 import recommender as rec
-from multiprocessing import Pool
+from multiprocessing import Pool, Lock
 from itertools import chain
 import os
 import sys
@@ -26,6 +26,9 @@ else:
 
 result_folder = 'results/exp_1_results/'
 RS_type = rec.BMFrecommender
+
+coverages = [1, 0.8, 0.6]
+
 RS_arguments = [{'neighbor_type': 'user',
                  'offline_kNN': offline,
                  'n_neighbors': nn,
@@ -36,7 +39,9 @@ RS_arguments = [{'neighbor_type': 'user',
                 for nn in chain([5], range(10, 61, 10))
                 for t in range(0, 4)
                 for offline in [True, False]
-                for coverage in [1, 0.8, 0.6]]
+                for coverage in coverages]
+
+BMF_locks = dict([(i, Lock()) for i in coverages])
 
 database = MatrixDatabase(dbread.read_matrix())
 holdout_view = HoldoutRatingsView(database, dbread.PATH,
@@ -47,11 +52,14 @@ if not os.path.isdir(result_folder):
 
 def run(i):
     global kfold_view, RS_type, RS_arguments, result_folder
+    min_coverage = RS_arguments[i]['min_coverage']
     print('Running ' + str(RS_arguments[i]))
-    evalu = HoldoutRatingsEvaluator(holdout_view, RS_type, RS_arguments[i],
-                                    result_folder, threshold=3, topk=10)
+    evalu = HoldoutBMF(holdout_view, RS_type, RS_arguments[i],
+                       result_folder, threshold=3, topk=10)
     print('Training...')
+    BMF_locks[min_coverage].acquire()
     evalu.train()
+    BMF_locks[min_coverage].release()
     print('Done!')
     print('Testing...')
     evalu.test()
