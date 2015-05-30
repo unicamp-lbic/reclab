@@ -105,7 +105,8 @@ class HoldoutRatingsView(object):
         self.threshold = threshold
         self.folder = testset_folder
         HOLDOUT_FILE = testset_folder + \
-            '/%d_pct_hidden.pkl' % (100 * pct_hidden)
+            '/%d_pct_hidden' % (100 * pct_hidden) + \
+            '_ratings_%d+.pkl' % (threshold)
 
         if os.path.isfile(HOLDOUT_FILE):
             with open(HOLDOUT_FILE, 'rb') as f:
