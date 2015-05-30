@@ -27,4 +27,4 @@ def read_matrix():
     j = np.array(j)-1
     matrix = sparse.coo_matrix((data,(i, j)),
                                shape=(qtty['users'], qtty['items']))
-    return matrix.tocsr()
+    return matrix.toarray()
