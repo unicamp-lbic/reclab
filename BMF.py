@@ -29,12 +29,13 @@ class BMF(object):
     def fit(self, matrix):
         # if matrix has more cols than rows, factorize transposed matrix
         # (more efficient)
-        if matrix.shape[1] > matrix.shape[0]:
+        nrow, ncol = matrix.shape
+        if nrow > ncol:
             factors = bmf(matrix.T, self.min_coverage)
-            self.Q, self.P = factors2matrices(factors, matrix.shape)
+            self.Q, self.P = factors2matrices(factors, (ncol, nrow))
         else:
             factors = bmf(matrix, self.min_coverage)
-            self.P, self.Q = factors2matrices(factors, matrix.shape)
+            self.P, self.Q = factors2matrices(factors, (nrow, ncol))
         return self.P, self.Q
 
 def bmf(matrix, min_coverage=1.0):
