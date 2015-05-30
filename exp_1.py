@@ -15,10 +15,12 @@ from evaluation import HoldoutRatingsEvaluator, HoldoutRatingsView
 import recommender as rec
 from multiprocessing import Pool
 from itertools import chain
+import os
+
 
 PARALLEL = False
 
-result_folder = 'results/exp_0_results/'
+result_folder = 'results/exp_1_results/'
 RS_type = rec.BMFrecommender
 RS_arguments = [{'neighbor_type': 'user',
                  'offline_kNN': offline,
@@ -36,6 +38,9 @@ database = MatrixDatabase(dbread.read_matrix())
 holdout_view = HoldoutRatingsView(database, dbread.PATH,
                                   pct_hidden=0.2, threshold=4)
 
+if not os.path.isdir(result_folder):
+    os.makedirs(result_folder)
+    
 def run(i):
     global kfold_view, RS_type, RS_arguments, result_folder
     print('Running ' + str(RS_arguments[i]))
