@@ -6,7 +6,7 @@ Created on Sat May 30 18:33:01 2015
 
 Experiment 2
 
-Repeat experiment 1 wising LSH forest
+Repeat experiment 1 uising LSH forest
 
 """
 
