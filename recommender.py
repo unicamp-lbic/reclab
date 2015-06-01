@@ -100,6 +100,7 @@ class BMFrecommender(RatingPredictor, ItemStrategy):
         self.transform_matrix = None
         self.kNN = neighbors.kNN(n_neighbors=n_neighbors,
             algorithm=algorithm, metric=metric)
+        self.offline_kNN = offline_kNN
 
     def transform(self, user_vector):
         np.user_vector.shape = (1,len(user_vector))
@@ -115,7 +116,7 @@ class BMFrecommender(RatingPredictor, ItemStrategy):
         else:
             self.set_bmf(P, Q)
 
-        if self.offline_knn:
+        if self.offline_kNN:
             if self.neighbor_type == 'user':
                 self.kNN.fit(self.P)
             elif self.neighbor_type == 'item':
