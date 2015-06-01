@@ -13,11 +13,11 @@ import numpy as np
 from sklearn.random_projection import GaussianRandomProjection,\
                                       SparseRandomProjection
 
-class ItemStrategy(object):
+class NeighborStrategy(object):
     __metaclass__ = abc.ABCMeta
 
-    @staticmethod
-    def _item_strategy(database, target_user, distances, indices, zero_mean):
+    def _item_strategy(self, database, target_user, distances, indices,
+                       zero_mean):
         indices = indices.squeeze()
         similarities = np.array(1.0/(1.0 + distances)).squeeze()
         if np.isscalar(target_user):
@@ -26,6 +26,23 @@ class ItemStrategy(object):
         else:
             ratings = np.array([target_user[item] for item in indices])
 
+        return (ratings, similarities)
+
+    def _user_strategy(self, database, target_item, distances, indices,
+                       zero_mean):
+        indices = indices.squeeze()
+        similarities = np.array(1.0/(1.0 + distances)).squeeze()
+
+        ratings = [database.get_rating(user, target_item)
+                   for user in indices]
+
+        return (ratings, similarities)
+
+class PredictionStrategy(object):
+    __metaclass__ = abc.ABCMeta
+
+
+    def _predict(self, ratings, similarities):
         if (ratings == 0).all():
             print('All user ratings on neighbor items are zero')
             pred_rating = 0
@@ -34,7 +51,9 @@ class ItemStrategy(object):
                 / similarities[ratings > 0].sum()
         return pred_rating
 
-class ItemBased(RatingPredictor, ItemStrategy):
+
+
+class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
     def __init__(self, n_neighbors=30, algorithm='brute',
                  metric='cosine'):
         self.database = None
@@ -51,12 +70,15 @@ class ItemBased(RatingPredictor, ItemStrategy):
         item_vector = self.database.get_item_vector(target_item,
                                                     zero_mean=True)
         distances, indices = self.kNN.kneighbors(item_vector)
-        return self._item_strategy(self.database, target_user,
-                            distances, indices, zero_mean=False)
+        ratings, similarities = \
+            self._item_strategy(self.database, target_user,
+                                distances, indices, zero_mean=False)
+
+        return self._predict(ratings, similarities)
 
 
 
-class UserBased(RatingPredictor):
+class UserBased(RatingPredictor, PredictionStrategy):
     def __init__(self, n_neighbors=20, algorithm='brute',
                  metric='pearson'):
         self.database = None
@@ -87,7 +109,7 @@ class UserBased(RatingPredictor):
         return rating
 
 
-class BMFrecommender(RatingPredictor, ItemStrategy):
+class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
     def __init__(self, neighbor_type='user', offline_kNN=True,
                  n_neighbors=20, algorithm='brute', metric='cosine',
                  threshold=0, min_coverage=1.0):
@@ -122,8 +144,8 @@ class BMFrecommender(RatingPredictor, ItemStrategy):
             elif self.neighbor_type == 'item':
                 self.kNN.fit(self.Q)
             else:
-                raise ValueError('Invalid neighbor_type parameter passed to\
-                                 constructor')
+                raise ValueError('Invalid neighbor_type "%s" parameter passed to\
+                                 constructor' % self.neighbor_type)
         self.transform_matrix = np.linalg.pinv(np.dot(self.Q.T, self.Q))
         return self
 
@@ -144,22 +166,23 @@ class BMFrecommender(RatingPredictor, ItemStrategy):
             if not self.offline_kNN:
                 indices = [user_ids[i] for i in indices]
 
-            ratings = [self.database.get_rating(user, target_item)
-                   for user in indices]
+            ratings, similarities = \
+                self._user_strategy(self.database, target_item,
+                                    distances, indices, zero_mean=False)
 
         elif self.neighbor_type == 'item':
             if not self.offline_kNN:
-                item_ids = self.dataset.get_rated_items(target_user)
+                item_ids = self.database.get_rated_items(target_user)
                 self.kNN.fit(self.Q[item_ids, :])
 
             item_vector = self.Q[target_item, :]
             distances, indices = self.kNN.kneighbors(item_vector)
 
-            pred_rating = \
+            ratings, similarities = \
             self._item_strategy(self.database, target_user,
                                 distances, indices, zero_mean=False)
 
-        return pred_rating
+        return self._predict(ratings, similarities)
 
     def set_bmf(self, P, Q):
         self.P = P
