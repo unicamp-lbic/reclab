@@ -128,8 +128,9 @@ class BaseEnsemble(BaseRecommender):
         self._RS_list = val
 
     @abc.abstractmethod
-    def fit(self):
+    def fit(self, database, **varargs):
         "learn recommender model (neighborhood, matrix factorization, etc)"
+        self.database = database
         for RS in self.RS_list:
-            RS.fit(self.database)
+            RS.fit(self.database, **varargs)
         return self

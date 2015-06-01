@@ -39,9 +39,8 @@ class ListEnsemble(BaseEnsemble):
 
 
 class MajorityEnsemble(ListEnsemble):
-    def __init__(self, database, RS_list):
+    def __init__(self, RS_list):
         self.RS_list = RS_list
-        self.database = database
 
     def _list_ensemble_strategy(self, rec_lists):
         item_votes = Counter()
@@ -51,9 +50,8 @@ class MajorityEnsemble(ListEnsemble):
 
 
 class RankSumEnsemble(ListEnsemble):
-    def __init__(self, database, RS_list):
+    def __init__(self, RS_list):
         self.RS_list = RS_list
-        self.database = database
 
     def _list_ensemble_strategy(self, rec_lists):
         rank_sum = Counter()
@@ -66,26 +64,25 @@ class RankSumEnsemble(ListEnsemble):
 class AvgRatingEnsemble(RatingEnsemble):
     def __init__(self, database, RS_list):
         self.RS_list = RS_list
-        self.database = database
 
     def _rating_ensemble_strategy(ratings):
         return np.mean(ratings)
 
 
 class RPBMFEnsembleFactory(BaseEnsemble):
-    def __init__(self, BMF_recommender, ensemble_type, n_projections=5,
-                 dim_range=(0.3, 0.5)):
-        dim = np.linspace(dim_range[0],
-                        dim_range[1],
-                        n_projections)
+    def __init__(self, ensemble_type, RP_type,
+                 n_projections=5, dim_range=(0.3, 0.5),
+                 BMF_args):
+
+        dim_red = np.linspace(dim_range[0], dim_range[1], n_projections)
         self.RS_list = []
         for i in range(n_projections):
-            self.RS_list.append(BMFRPrecommender(BMF_recommender=BMF_recommender,
-                                            RP_type='sparse',
-                                            dim_red=dim[i]))
-        self.ensemble_type = ensemble_type
-        self.database = BMF_recommender.database
+            self.RS_list.append(
+                BMFRPrecommender(RP_type=RP_type, dim_red=dim_red[i],
+                                 **BMF_args))
 
-    def run(self):
-       return self.ensemble_type(database=self.database,
-                             RS_list=self.RS_list)
+        self.ensemble_type = ensemble_type
+
+
+    def get_ensemble(self):
+       return self.ensemble_type(RS_list=self.RS_list)
