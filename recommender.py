@@ -126,7 +126,8 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
 
     def transform(self, user_vector):
         np.user_vector.shape = (1,len(user_vector))
-        return np.dot(self.transform_matrix, user_vector)
+        return np.dot(self.transform_matrix,
+                      np.dot(user_vector, self.Q))
 
 
     def fit(self, database, P=None, Q=None):
