@@ -29,13 +29,14 @@ RS_type = rec.BMFrecommender
 
 coverages = [1, 0.8, 0.6]
 
-RS_arguments = [{'neighbor_type': 'user',
+RS_arguments = [{'neighbor_type': nn_type,
                  'offline_kNN': offline,
                  'n_neighbors': nn,
                  'algorithm': 'brute',
                  'metric': 'cosine',
                  'threshold': t,
                  'min_coverage': coverage}
+                for nn_type in ['user', 'item']
                 for nn in chain([5], range(10, 61, 10))
                 for t in range(0, 4)
                 for offline in [True, False]
@@ -53,19 +54,19 @@ if not os.path.isdir(result_folder):
 def run(i):
     global kfold_view, RS_type, RS_arguments, result_folder
     min_coverage = RS_arguments[i]['min_coverage']
-    print('Running ' + str(RS_arguments[i]))
+    print('Running %d' % i + str(RS_arguments[i]))
     evalu = HoldoutBMF(holdout_view, RS_type, RS_arguments[i],
                        result_folder, threshold=3, topk=10)
 
     BMF_locks[min_coverage].acquire()
-    print('Training ' + str(RS_arguments[i]))
+    print('Training %d' % i + str(RS_arguments[i]))
     evalu.train()
-    print('Done training ' + str(RS_arguments[i]))
+    print('Done training %d' % i + str(RS_arguments[i]))
     BMF_locks[min_coverage].release()
 
-    print('Testing ' + str(RS_arguments[i]))
+    print('Testing %d' % i + str(RS_arguments[i]))
     evalu.test()
-    print('Done testing ' + str(RS_arguments[i]))
+    print('Done testing %d' % i + str(RS_arguments[i]))
 
 
 if PARALLEL:
