@@ -30,7 +30,7 @@ class BMF(object):
         # if matrix has more cols than rows, factorize transposed matrix
         # (more efficient)
         nrow, ncol = matrix.shape
-        if nrow > ncol:
+        if nrow < ncol:
             factors = bmf(matrix.T, self.min_coverage)
             self.Q, self.P = factors2matrices(factors, (ncol, nrow))
         else:
@@ -122,7 +122,7 @@ def bool_dot(m1, m2):
     m2 = m2.toarray() > 0
     return np.dot(m1, m2).astype(np.int)
 
-#%%
+
 def _test():
     matrix = np.array([[1, 0, 1, 0, 1, 1],
                        [0, 0, 1, 0, 0, 0],
