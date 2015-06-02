@@ -18,9 +18,11 @@ from multiprocessing import Pool
 PARALLEL = False
 
 result_folder = 'results/exp_0_results/'
-RS_types = [rec.ItemBased, rec.BMFrecommender, rec.BMFRPrecommender]
+RS_types = [rec.ItemBased,
+            rec.BMFrecommender,
+            rec.BMFRPrecommender]
 
-database = TestDB(10, 40, min_items=0.5)
+database = TestDB(50, 100, min_items=0.5)
 kfold_view = kFoldView(database, result_folder, n_folds=2)
 holdout_view = HoldoutRatingsView(database, result_folder,
                                   pct_hidden=0.2, threshold=4)
