@@ -33,8 +33,8 @@ class NeighborStrategy(object):
         indices = indices.squeeze()
         similarities = np.array(1.0/(1.0 + distances)).squeeze()
 
-        ratings = [database.get_rating(user, target_item)
-                   for user in indices]
+        ratings = np.array([database.get_rating(user, target_item)
+                   for user in indices])
 
         return (ratings, similarities)
 
@@ -191,25 +191,35 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
 
 
 class BMFRPrecommender(BMFrecommender):
-    def __init__(self, RP_type='sparse', dim_red='auto',
+    def __init__(self, RP_type='sparse', dim_red=0.5,
                  neighbor_type='user', offline_kNN=True,
                  n_neighbors=10, algorithm='brute',
-                 metric='cosine', threshold=0):
-        BMFrecommender.__init__(self, n_neighbors, algorithm,
-                                metric, threshold)
-        if dim_red != 'auto':
-            n_components = int(np.ceil(dim_red*self.database.n_users()))
-        else:
-            n_components = dim_red
+                 metric='cosine', threshold=0, min_coverage=1.0):
+        BMFrecommender.__init__(self,neighbor_type=neighbor_type,
+            offline_kNN=offline_kNN, n_neighbors=n_neighbors,
+            algorithm=algorithm, metric=metric,
+            threshold=threshold, min_coverage=min_coverage)
+        self.dim_red = dim_red
+        self.RP = RP_type
 
-        if RP_type == 'gaussian':
-            RP_type = GaussianRandomProjection
-        elif RP_type == 'sparse':
-            RP_type = SparseRandomProjection
-        self.RP = RP_type(n_components=n_components)
+    def transform(self, user_vector):
+        new_vec = BMFrecommender.transform(self, user_vector)
+        return self.RP.transform(new_vec)
 
     def fit(self, database, P=None, Q=None):
         self.database = database
+
+        if self.dim_red != 'auto':
+            n_components = int(np.ceil(self.dim_red*self.database.n_users()))
+        else:
+            n_components = self.dim_red
+
+        if self.RP == 'gaussian':
+            self.RP = GaussianRandomProjection
+        elif self.RP == 'sparse':
+            self.RP = SparseRandomProjection
+        self.RP = self.RP(n_components=n_components)
+
         mf = BMF()
         if P is None or Q is None:
             self.P, self.Q = \
@@ -219,12 +229,12 @@ class BMFRPrecommender(BMFrecommender):
 
         if self.neighbor_type == 'user':
             self.P = self.RP.fit_transform(self.P)
-            if self.offline_knn:
+            if self.offline_kNN:
                 self.kNN.fit(self.P)
 
         elif self.neighbor_type == 'item':
             self.Q = self.RP.fit_transform(self.Q)
-            if self.offline_knn:
+            if self.offline_kNN:
                 self.kNN.fit(self.Q)
         else:
             raise ValueError('Invalid neighbor_type parameter passed to\
