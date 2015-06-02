@@ -125,9 +125,9 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
         self.offline_kNN = offline_kNN
 
     def transform(self, user_vector):
-        np.user_vector.shape = (1,len(user_vector))
-        return np.dot(self.transform_matrix,
-                      np.dot(user_vector, self.Q))
+        user_vector = np.array(user_vector, ndmin=2)
+        return np.dot(np.dot(user_vector, self.Q),
+                      self.transform_matrix)
 
 
     def fit(self, database, P=None, Q=None):
