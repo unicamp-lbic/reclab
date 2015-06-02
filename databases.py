@@ -29,8 +29,8 @@ class MatrixDatabase(BaseDatabase):
     def n_items(self):
         return self.matrix.shape[1]
 
-    def get_matrix(self, zero_mean=False, threshold=False):
-        if threshold:
+    def get_matrix(self, zero_mean=False, threshold=None):
+        if threshold is not None:
             if self.thresholded is None:
                 self.thresholded = \
                     np.array(self.matrix > threshold, dtype=float)
