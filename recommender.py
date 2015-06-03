@@ -19,8 +19,8 @@ class NeighborStrategy(object):
 
     def _item_strategy(self, database, target_user, distances, indices,
                        zero_mean):
-        indices = indices.squeeze()
-        similarities = np.array(1.0/(1.0 + distances)).squeeze()
+        similarities = np.array(1.0/(1.0 + distances)).\
+            reshape(distances.shape[1])
         if np.isscalar(target_user):
             ratings = np.array([database.get_rating(target_user, item)
                                 for item in indices])
@@ -31,8 +31,8 @@ class NeighborStrategy(object):
 
     def _user_strategy(self, database, target_item, distances, indices,
                        zero_mean):
-        indices = indices.squeeze()
-        similarities = np.array(1.0/(1.0 + distances)).squeeze()
+        similarities = np.array(1.0/(1.0 + distances)).\
+            reshape(distances.shape[1])
 
         ratings = np.array([database.get_rating(user, target_item)
                             for user in indices])
@@ -136,7 +136,6 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
         return np.dot(np.dot(user_vector, self.Q),
                       self.transform_matrix)
 
-
     def fit(self, database, P=None, Q=None):
         self.database = database
         mf = BMF(self.min_coverage)
@@ -161,6 +160,10 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
         if self.neighbor_type == 'user':
             if not self.offline_kNN:
                 user_ids = self.database.get_rated_users(target_item)
+                if len(user_ids) == 0:
+                    print('No co-rating neighbor for user %d, item %d' %
+                          (target_user, target_item))
+                    return 0
                 self.kNN.fit(self.P[user_ids, :])
 
             if np.isscalar(target_user):
@@ -168,12 +171,18 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
             else:
                 user_vector = self.transform(target_user)
 
-            distances, indices = self.kNN.kneighbors(user_vector,
-                                                     self.n_neighbors)
-            indices = indices.squeeze()
+            if not self.offline_kNN:
+                distances, indices = \
+                    self.kNN.kneighbors(user_vector,
+                                        min(self.n_neighbors, len(user_ids)))
+            else:
+                distances, indices = \
+                    self.kNN.kneighbors(user_vector, self.n_neighbors)
+
+            indices = indices.reshape(indices.shape[1])
 
             if not self.offline_kNN:
-                indices = [user_ids[i] for i in indices]
+                indices = np.array([user_ids[i] for i in indices])
 
             ratings, similarities = \
                 self._user_strategy(self.database, target_item,
@@ -182,11 +191,21 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
         elif self.neighbor_type == 'item':
             if not self.offline_kNN:
                 item_ids = self.database.get_rated_items(target_user)
+                if len(item_ids) == 0:
+                    print('No co-rating neighbor for user %d, item %d' %
+                          (target_user, target_item))
+                    return 0
                 self.kNN.fit(self.Q[item_ids, :])
 
             item_vector = self.Q[target_item, :]
-            distances, indices = self.kNN.kneighbors(item_vector,
-                                                     self.n_neighbors)
+
+            if not self.offline_kNN:
+                distances, indices = \
+                    self.kNN.kneighbors(item_vector,
+                                        min(self.n_neighbors, len(item_ids)))
+            else:
+                distances, indices = self.kNN.kneighbors(item_vector,
+                                                         self.n_neighbors)
 
             ratings, similarities = \
                 self._item_strategy(self.database, target_user,
