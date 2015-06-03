@@ -102,7 +102,7 @@ class Evaluator(object):
 
 def _gen_name(RS_type, RS_arguments):
     name = [RS_type.__name__]
-    for k, l in RS_arguments.items():
+    for k, i in RS_arguments.items():
         name.append(str(k))
         name.append(str(i))
     return '_'.join(name)
