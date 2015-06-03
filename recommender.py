@@ -13,6 +13,7 @@ import numpy as np
 from sklearn.random_projection import GaussianRandomProjection,\
                                       SparseRandomProjection
 
+
 class NeighborStrategy(object):
     __metaclass__ = abc.ABCMeta
 
@@ -34,13 +35,13 @@ class NeighborStrategy(object):
         similarities = np.array(1.0/(1.0 + distances)).squeeze()
 
         ratings = np.array([database.get_rating(user, target_item)
-                   for user in indices])
+                            for user in indices])
 
         return (ratings, similarities)
 
+
 class PredictionStrategy(object):
     __metaclass__ = abc.ABCMeta
-
 
     def _predict(self, ratings, similarities):
         if (ratings == 0).all():
@@ -52,12 +53,12 @@ class PredictionStrategy(object):
         return pred_rating
 
 
-
 class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
-    def __init__(self, n_neighbors=30, algorithm='brute',
+    def __init__(self, n_neighbors=10, algorithm='brute',
                  metric='cosine'):
         self.database = None
-        self.kNN = neighbors.kNN(n_neighbors=n_neighbors,
+        self.n_neighbors = n_neighbors
+        self.kNN = neighbors.kNN(n_neighbors=30*n_neighbors,
                                  algorithm=algorithm, metric=metric)
 
     def fit(self, database):
@@ -69,7 +70,7 @@ class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
     def predict(self, target_user, target_item):
         item_vector = self.database.get_item_vector(target_item,
                                                     zero_mean=True)
-        distances, indices = self.kNN.kneighbors(item_vector)
+        distances, indices = self.kNN.kneighbors(item_vector, self.n_neighbors)
         ratings, similarities = \
             self._item_strategy(self.database, target_user,
                                 distances, indices, zero_mean=False)
@@ -77,13 +78,12 @@ class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
         return self._predict(ratings, similarities)
 
 
-
 class UserBased(RatingPredictor, PredictionStrategy):
     def __init__(self, n_neighbors=20, algorithm='brute',
                  metric='pearson'):
         self.database = None
         self.kNN = neighbors.kNN(n_neighbors=n_neighbors,
-            algorithm=algorithm, metric=metric)
+                                 algorithm=algorithm, metric=metric)
 
     def fit(self, database):
         self.database = database
@@ -111,7 +111,7 @@ class UserBased(RatingPredictor, PredictionStrategy):
 
 class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
     def __init__(self, neighbor_type='user', offline_kNN=True,
-                 n_neighbors=20, algorithm='brute', metric='cosine',
+                 n_neighbors=10, algorithm='brute', metric='cosine',
                  threshold=0, min_coverage=1.0):
         self.database = None
         self.neighbor_type = neighbor_type
@@ -120,8 +120,15 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
         self.P = None
         self.Q = None
         self.transform_matrix = None
-        self.kNN = neighbors.kNN(n_neighbors=n_neighbors,
-            algorithm=algorithm, metric=metric)
+        self.n_neighbors = n_neighbors
+
+        if offline_kNN:
+            self.model_size = 30 * n_neighbors
+        else:
+            self.model_size = n_neighbors
+
+        self.kNN = neighbors.kNN(n_neighbors=self.model_size,
+                                 algorithm=algorithm, metric=metric)
         self.offline_kNN = offline_kNN
 
     def transform(self, user_vector):
@@ -145,8 +152,8 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
             elif self.neighbor_type == 'item':
                 self.kNN.fit(self.Q)
             else:
-                raise ValueError('Invalid neighbor_type "%s" parameter passed to\
-                                 constructor' % self.neighbor_type)
+                raise ValueError('Invalid neighbor_type "%s" parameter passed \
+                                 to constructor' % self.neighbor_type)
         self.transform_matrix = np.linalg.pinv(np.dot(self.Q.T, self.Q))
         return self
 
@@ -161,7 +168,8 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
             else:
                 user_vector = self.transform(target_user)
 
-            distances, indices = self.kNN.kneighbors(user_vector)
+            distances, indices = self.kNN.kneighbors(user_vector,
+                                                     self.n_neighbors)
             indices = indices.squeeze()
 
             if not self.offline_kNN:
@@ -177,11 +185,12 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
                 self.kNN.fit(self.Q[item_ids, :])
 
             item_vector = self.Q[target_item, :]
-            distances, indices = self.kNN.kneighbors(item_vector)
+            distances, indices = self.kNN.kneighbors(item_vector,
+                                                     self.n_neighbors)
 
             ratings, similarities = \
-            self._item_strategy(self.database, target_user,
-                                distances, indices, zero_mean=False)
+                self._item_strategy(self.database, target_user,
+                                    distances, indices, zero_mean=False)
 
         return self._predict(ratings, similarities)
 
@@ -195,10 +204,9 @@ class BMFRPrecommender(BMFrecommender):
                  neighbor_type='user', offline_kNN=True,
                  n_neighbors=10, algorithm='brute',
                  metric='cosine', threshold=0, min_coverage=1.0):
-        BMFrecommender.__init__(self,neighbor_type=neighbor_type,
-            offline_kNN=offline_kNN, n_neighbors=n_neighbors,
-            algorithm=algorithm, metric=metric,
-            threshold=threshold, min_coverage=min_coverage)
+        BMFrecommender.__init__(self, neighbor_type=neighbor_type,
+                                algorithm=algorithm, metric=metric,
+                                threshold=threshold, min_coverage=min_coverage)
         self.dim_red = dim_red
         self.RP = RP_type
 
