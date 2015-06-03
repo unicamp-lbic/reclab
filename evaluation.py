@@ -99,6 +99,14 @@ class Evaluator(object):
         metrics = np.array([precision, recall, F1, MAE, RMSE])
         return metrics
 
+
+def _gen_name(RS_type, RS_arguments):
+    name = [RS_type.__name__]
+    for k, l in RS_arguments.items():
+        name.append(str(k))
+        name.append(str(i))
+    return '_'.join(name)
+
 class HoldoutRatingsView(object):
     def __init__(self, database, testset_folder, pct_hidden=0.2, threshold=4):
         self.pct_hidden = pct_hidden
@@ -193,12 +201,11 @@ class HoldoutRatingsEvaluator(object):
         self.pct_hidden = holdout_view.pct_hidden
         self.topk = topk
         self.threshold = threshold
-        self.fname_prefix = result_folder+'/'+\
-                            '_'.join([RS_type.__name__]+
-                                     [str(arg) for arg in RS_arguments]) \
-                            + '_%d_pct_hidden' % (100 * self.pct_hidden) \
-                            + '_rec_threshold_%d' % self.threshold \
-                            + '_top_%d' % self.topk
+        self.fname_prefix = result_folder + '/' \
+            + _gen_name(RS_type, RS_arguments)\
+            + '_%d_pct_hidden' % (100 * self.pct_hidden) \
+            + '_rec_threshold_%d' % self.threshold \
+            + '_top_%d_threshold_%d' % (self.topk, self.threshold)
         self.holdout = holdout_view
 
 
@@ -296,12 +303,11 @@ class kFoldEvaluator(object):
         self.pct_hidden = pct_hidden
         self.topk = topk
         self.threshold = threshold
-        self.fname_prefix = result_folder+'/'+\
-                            '_'.join([RS_type.__name__]+
-                                     [str(arg) for arg in RS_arguments]) \
-                            + '_%dfolds' % self.n_folds \
-                            + '_%0.2f_pct_hidden' % self.pct_hidden \
-                            + 'top_%d_threshold_%d' % (self.topk, self.threshold)
+        self.fname_prefix = result_folder + '/' \
+            + _gen_name(RS_type, RS_arguments)\
+            + '_%dfolds' % self.n_folds \
+            + '_%0.2f_pct_hidden' % self.pct_hidden \
+            + '_top_%d_threshold_%d' % (self.topk, self.threshold)
 
     def _train_single_fold(self, i, force_train):
         train_file = self.fname_prefix + '_trained_fold_%d.pkl'%i
