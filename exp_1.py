@@ -17,6 +17,7 @@ from multiprocessing import Pool, Lock
 from itertools import chain
 import os
 import sys
+from numpy.random import shuffle
 
 
 if 'parallel' in set(sys.argv):
@@ -41,7 +42,7 @@ RS_arguments = [{'neighbor_type': nn_type,
                 for t in range(0, 4)
                 for offline in [True, False]
                 for coverage in coverages]
-
+shuffle(RS_arguments)
 BMF_locks = dict([(i, Lock()) for i in coverages])
 
 database = MatrixDatabase(dbread.read_matrix())
