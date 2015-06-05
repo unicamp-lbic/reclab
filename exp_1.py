@@ -17,6 +17,7 @@ from multiprocessing import Pool, Lock
 from itertools import chain
 import os
 import sys
+import traceback
 from numpy.random import shuffle
 
 
@@ -54,21 +55,26 @@ if not os.path.isdir(result_folder):
 
 def run(i):
     global kfold_view, RS_type, RS_arguments, result_folder
-    min_coverage = RS_arguments[i]['min_coverage']
-    print('Running %d' % i + str(RS_arguments[i]))
-    evalu = HoldoutBMF(holdout_view, RS_type, RS_arguments[i],
-                       result_folder, threshold=3, topk=10)
 
-    BMF_locks[min_coverage].acquire()
-    print('Training %d' % i + str(RS_arguments[i]))
-    evalu.train()
-    print('Done training %d' % i + str(RS_arguments[i]))
-    BMF_locks[min_coverage].release()
+    try:
+        min_coverage = RS_arguments[i]['min_coverage']
+        print('Running %d' % i + str(RS_arguments[i]))
+        evalu = HoldoutBMF(holdout_view, RS_type, RS_arguments[i],
+                           result_folder, threshold=3, topk=10)
 
-    print('Testing %d' % i + str(RS_arguments[i]))
-    evalu.test()
-    print('Done testing %d' % i + str(RS_arguments[i]))
+        BMF_locks[min_coverage].acquire()
+        print('Training %d' % i + str(RS_arguments[i]))
+        evalu.train()
+        print('Done training %d' % i + str(RS_arguments[i]))
+        BMF_locks[min_coverage].release()
 
+        print('Testing %d' % i + str(RS_arguments[i]))
+        evalu.test()
+        print('Done testing %d' % i + str(RS_arguments[i]))
+
+    except:
+        traceback.print_exception(*sys.exc_info(),
+                                  limit=2, file=sys.stdout)
 
 if PARALLEL:
     pool = Pool()
