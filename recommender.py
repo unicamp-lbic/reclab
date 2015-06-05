@@ -47,9 +47,9 @@ class PredictionStrategy(object):
         if (ratings == 0).all():
             print('All user ratings on neighbor items are zero')
             pred_rating = 0
-        elif np.isscalar(ratings):
-            pred_rating = ratings * similarities[0]
         else:
+            ratings = np.array(ratings, ndmin=1)
+            similarities = np.array(similarities, ndmin=1)
             pred_rating = np.dot(ratings, similarities) \
                 / similarities[ratings > 0].sum()
         return pred_rating
