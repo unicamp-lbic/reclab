@@ -259,8 +259,8 @@ class HoldoutBMF(HoldoutRatingsEvaluator):
                 self.RS.fit(self.holdout.train_set)
                 with open(BMF_file, 'wb') as f:
                     dump((self.RS.P, self.RS.Q), f)
-                with open(train_file, 'wb') as f:
-                    dump(self.RS, f)
+            with open(train_file, 'wb') as f:
+                dump(self.RS, f)
 
 
 class kFoldView(object):
@@ -372,7 +372,7 @@ class kFoldBMF(kFoldEvaluator):
                 self.RS[i].fit(self.train_sets[i])
                 with open(BMF_file, 'wb') as f:
                     dump((self.RS[i].P, self.RS[i].Q), f)
-                with open(train_file, 'wb') as f:
-                    dump(self.RS[i], f)
+            with open(train_file, 'wb') as f:
+                dump(self.RS[i], f)
 
 
