@@ -102,7 +102,10 @@ class Evaluator(object):
 
 def _gen_name(RS_type, RS_arguments):
     name = [RS_type.__name__]
-    for k, i in RS_arguments.items():
+    arguments = \
+        sorted([(arg.replace('_',''), val)
+                for arg, val in RS_arguments.items()])
+    for k, i in arguments:
         name.append(str(k))
         name.append(str(i))
     return '_'.join(name)
@@ -204,7 +207,7 @@ class HoldoutRatingsEvaluator(object):
         self.fname_prefix = result_folder + '/' \
             + _gen_name(RS_type, RS_arguments)\
             + '_%d_pct_hidden' % (100 * self.pct_hidden) \
-            + '_rec_threshold_%d' % self.threshold \
+            + '_ratings_%d+' % (holdout_view.threshold)\
             + '_top_%d_threshold_%d' % (self.topk, self.threshold)
         self.holdout = holdout_view
 
@@ -305,7 +308,7 @@ class kFoldEvaluator(object):
         self.threshold = threshold
         self.fname_prefix = result_folder + '/' \
             + _gen_name(RS_type, RS_arguments)\
-            + '_%dfolds' % self.n_folds \
+            + '_%d_folds' % self.n_folds \
             + '_%0.2f_pct_hidden' % self.pct_hidden \
             + '_top_%d_threshold_%d' % (self.topk, self.threshold)
 
