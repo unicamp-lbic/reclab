@@ -55,13 +55,11 @@ if not os.path.isdir(result_folder):
 
 def run(i):
     global kfold_view, RS_type, RS_arguments, result_folder
-
+    min_coverage = RS_arguments[i]['min_coverage']
+    print('Running %d' % i + str(RS_arguments[i]))
+    evalu = HoldoutBMF(holdout_view, RS_type, RS_arguments[i],
+                       result_folder, threshold=3, topk=10)
     try:
-        min_coverage = RS_arguments[i]['min_coverage']
-        print('Running %d' % i + str(RS_arguments[i]))
-        evalu = HoldoutBMF(holdout_view, RS_type, RS_arguments[i],
-                           result_folder, threshold=3, topk=10)
-
         BMF_locks[min_coverage].acquire()
         print('Training %d' % i + str(RS_arguments[i]))
         evalu.train()
@@ -73,8 +71,8 @@ def run(i):
         print('Done testing %d' % i + str(RS_arguments[i]))
 
     except:
-        traceback.print_exception(*sys.exc_info(),
-                                  limit=2, file=sys.stdout)
+        with open(evalu.fname_prefix+'_error_log_%d.out' % i, 'w') as f:
+            traceback.print_exception(*sys.exc_info(), file=f)
 
 if PARALLEL:
     pool = Pool()
