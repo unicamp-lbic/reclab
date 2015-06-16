@@ -19,8 +19,10 @@ class NeighborStrategy(object):
 
     def _item_strategy(self, database, target_user, distances, indices,
                        zero_mean):
-        similarities = np.array(1.0/(1.0 + distances)).\
-            reshape(distances.shape[1])
+        shape = len(np.array(indices, ndmin=1))
+        similarities = np.array((1.0 - distances)).reshape(shape)
+        indices = indices.reshape(shape)
+
         if np.isscalar(target_user):
             ratings = np.array([database.get_rating(target_user, item)
                                 for item in indices])
@@ -31,8 +33,9 @@ class NeighborStrategy(object):
 
     def _user_strategy(self, database, target_item, distances, indices,
                        zero_mean):
-        similarities = np.array(1.0/(1.0 + distances)).\
-            reshape(distances.shape[1])
+        shape = len(np.array(indices, ndmin=1))
+        similarities = np.array((1.0 - distances)).reshape(shape)
+        indices = indices.reshape(shape)
 
         ratings = np.array([database.get_rating(user, target_item)
                             for user in indices])
@@ -244,10 +247,9 @@ class BMFRPrecommender(BMFrecommender):
             n_components = self.dim_red
 
         if self.RP == 'gaussian':
-            self.RP = GaussianRandomProjection
+            self.RP = GaussianRandomProjection(n_components=n_components)
         elif self.RP == 'sparse':
-            self.RP = SparseRandomProjection
-        self.RP = self.RP(n_components=n_components)
+            self.RP = SparseRandomProjection(n_components=n_components)
 
         mf = BMF()
         if P is None or Q is None:
