@@ -48,7 +48,7 @@ BMF_locks = dict([(i, Lock()) for i in coverages])
 
 database = MatrixDatabase(dbread.read_matrix())
 holdout_view = HoldoutRatingsView(database, dbread.PATH,
-                                  pct_hidden=0.2, threshold=4)
+                                  pct_hidden=0.2, threshold=3)
 
 if not os.path.isdir(result_folder):
     os.makedirs(result_folder)
@@ -58,7 +58,7 @@ def run(i):
     min_coverage = RS_arguments[i]['min_coverage']
     print('Running %d' % i + str(RS_arguments[i]))
     evalu = HoldoutBMF(holdout_view, RS_type, RS_arguments[i],
-                       result_folder, threshold=3, topk=10)
+                       result_folder, threshold=3, topk=20)
     try:
         BMF_locks[min_coverage].acquire()
         print('Training %d' % i + str(RS_arguments[i]))

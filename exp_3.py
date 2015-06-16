@@ -59,17 +59,20 @@ def run(i):
     print('Running %d' % i + str(RS_arguments[i]))
     evalu = HoldoutBMF(holdout_view, RS_type, RS_arguments[i],
                        result_folder, threshold=3, topk=10)
+    try:
+        BMF_locks[min_coverage].acquire()
+        print('Training %d' % i + str(RS_arguments[i]))
+        evalu.train()
+        print('Done training %d' % i + str(RS_arguments[i]))
+        BMF_locks[min_coverage].release()
 
-    BMF_locks[min_coverage].acquire()
-    print('Training %d' % i + str(RS_arguments[i]))
-    evalu.train()
-    print('Done training %d' % i + str(RS_arguments[i]))
-    BMF_locks[min_coverage].release()
+        print('Testing %d' % i + str(RS_arguments[i]))
+        evalu.test()
+        print('Done testing %d' % i + str(RS_arguments[i]))
 
-    print('Testing %d' % i + str(RS_arguments[i]))
-    evalu.test()
-    print('Done testing %d' % i + str(RS_arguments[i]))
-
+    except:
+        with open(evalu.fname_prefix+'_error_log_%d.out' % i, 'w') as f:
+            traceback.print_exception(*sys.exc_info(), file=f)
 
 if PARALLEL:
     pool = Pool()
