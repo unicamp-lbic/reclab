@@ -111,10 +111,12 @@ def _gen_name(RS_type, RS_arguments):
     return '_'.join(name)
 
 class HoldoutRatingsView(object):
-    def __init__(self, database, testset_folder, pct_hidden=0.2, threshold=4):
+    def __init__(self, database, testset_folder, nsplits=1,
+                 pct_hidden=0.2, threshold=4):
         self.pct_hidden = pct_hidden
         self.threshold = threshold
         self.folder = testset_folder
+        self.nsplits = nsplits
         HOLDOUT_FILE = testset_folder + \
             '/%d_pct_hidden' % (100 * pct_hidden) + \
             '_ratings_%d+.pkl' % (threshold)
@@ -123,21 +125,27 @@ class HoldoutRatingsView(object):
             with open(HOLDOUT_FILE, 'rb') as f:
                 self.hidden_coord = load(f)
         else:
-            # get positions equal to or above threshold (ratings)
-            matrix = np.array(database.get_matrix())
-            row, col = np.where(matrix >= threshold)
-            n_hidden = np.ceil(pct_hidden*len(row))
-            # pick n_hidden random positions
-            hidden_idx = np.random.randint(0, len(row), n_hidden)
-            self.hidden_coord = [coo for coo in zip(row[hidden_idx],
-                                               col[hidden_idx])]
+            self.hidden_coord = []
+            for _ in range(nsplits):
+                # get positions equal to or above threshold (ratings)
+                matrix = np.array(database.get_matrix())
+                row, col = np.where(matrix >= threshold)
+                n_hidden = np.ceil(pct_hidden*len(row))
+                # pick n_hidden random positions
+                hidden_idx = np.random.randint(0, len(row), n_hidden)
+                self.hidden_coord.append(
+                    [coo for coo in zip(row[hidden_idx], col[hidden_idx])])
+
             with open(HOLDOUT_FILE, 'wb') as f:
                 dump(self.hidden_coord, f)
 
-        self.train_set = HiddenRatingsDatabase(database.get_matrix(),
-                                                self.hidden_coord)
-        self.test_set =  [(database.get_matrix()[u, i], u, i)
-                          for u, i in self.hidden_coord]
+        self.train_set = \
+            [HiddenRatingsDatabase(database.get_matrix(), split)
+             for split in self.hidden_coord]
+
+        self.test_set = \
+            [[(database.get_matrix()[u, i], u, i) for u, i in split]
+             for split in self.hidden_coord]
 
 
 class HoldoutRatingsMetrics(object):
@@ -194,6 +202,7 @@ class HoldoutRatingsMetrics(object):
         metrics = np.array([precision, recall, F1, MAE, RMSE])
         return metrics
 
+
 class HoldoutRatingsEvaluator(object):
     def __init__(self, holdout_view, RS_type, RS_arguments, result_folder,
                  topk=1, threshold=3):
@@ -204,29 +213,37 @@ class HoldoutRatingsEvaluator(object):
         self.pct_hidden = holdout_view.pct_hidden
         self.topk = topk
         self.threshold = threshold
+        self.holdout = holdout_view
         self.fname_prefix = result_folder + '/' \
             + _gen_name(RS_type, RS_arguments)\
             + '_%d_pct_hidden' % (100 * self.pct_hidden) \
-            + '_ratings_%d+' % (holdout_view.threshold)\
+            + '_nsplits_%d' % self.holdout.nsplits \
+            + '_ratings_%d+' % (self.holdout.threshold)\
             + '_top_%d_threshold_%d' % (self.topk, self.threshold)
-        self.holdout = holdout_view
 
 
     def train(self, force_train=False):
-        train_file = self.fname_prefix + '_trained.pkl'
-        if os.path.isfile(train_file) and not force_train:
-            with open(train_file, 'rb') as f:
-                self.RS = load(f)
-        else:
-            self.RS.fit(self.holdout.train_set)
-            with open(train_file, 'wb') as f:
-                dump(self.RS, f)
+        for i in range(self.holdout.nsplits):
+            train_file = self.fname_prefix + \
+                '_split_%d(%d)' % (i, self.holdout.nsplits) + \
+                '_trained.pkl'
+            if os.path.isfile(train_file) and not force_train:
+                with open(train_file, 'rb') as f:
+                    self.RS = load(f)
+            else:
+                self.RS.fit(self.holdout.train_set[i])
+                with open(train_file, 'wb') as f:
+                    dump(self.RS, f)
 
     def test(self):
-        evalu = HoldoutRatingsMetrics(self.RS, self.holdout.test_set, self.topk,
-                                      self.threshold)
-        metrics = evalu.calc_metrics()
+        metrics = []
+        for i in range(self.holdout.nsplits):
+            evalu = \
+                HoldoutRatingsMetrics(self.RS, self.holdout.test_set[i],
+                                      self.topk, self.threshold)
+            metrics.append(evalu.calc_metrics())
         metrics_labels = evalu.columns()
+        metrics = np.array(metrics)
         np.savetxt(self.fname_prefix+'_test.txt', metrics.T, delimiter=',',
                    header=','.join(['"'+l+'"' for l in metrics_labels]))
 
@@ -239,28 +256,32 @@ class HoldoutBMF(HoldoutRatingsEvaluator):
                                          result_folder, topk, threshold)
 
         min_coverage = RS_arguments['min_coverage']
+        threshold = RS_arguments['threshold']
         self.BMF_file = self.holdout.folder + \
             'BMF_coverage_%0.2f' % min_coverage + \
-            '_%d_pct_hidden.pkl' % (holdout_view.pct_hidden * 100)
+            'binarythreshold _%d' % threshold + \
+            '_%d_pct_hidden' % (holdout_view.pct_hidden * 100) + \
+            '_nsplits_%d' % (i, self.holdout.nsplits)
 
     def train(self, force_train=False):
         train_file = self.fname_prefix + '_trained.pkl'
-        BMF_file = self.BMF_file
-        if os.path.isfile(train_file) and not force_train:
-            with open(train_file, 'rb') as f:
-                self.RS = load(f)
-        else:
-            if os.path.isfile(BMF_file) and not force_train:
-                with open(BMF_file, 'rb') as f:
-                    P, Q = load(f)
-                self.RS.fit(self.holdout.train_set, P, Q)
-
+        BMF_file = self.BMF_file + '_split_%d.pkl' % (i+1, self.holdout.nsplits)
+        for i in range(self.holdout.nsplits):
+            if os.path.isfile(train_file) and not force_train:
+                with open(train_file, 'rb') as f:
+                    self.RS = load(f)
             else:
-                self.RS.fit(self.holdout.train_set)
-                with open(BMF_file, 'wb') as f:
-                    dump((self.RS.P, self.RS.Q), f)
-            with open(train_file, 'wb') as f:
-                dump(self.RS, f)
+                if os.path.isfile(BMF_file) and not force_train:
+                    with open(BMF_file, 'rb') as f:
+                        P, Q = load(f)
+                    self.RS.fit(self.holdout.train_set[i], P, Q)
+
+                else:
+                    self.RS.fit(self.holdout.train_set[i])
+                    with open(BMF_file, 'wb') as f:
+                        dump((self.RS.P, self.RS.Q), f)
+                with open(train_file, 'wb') as f:
+                    dump(self.RS, f)
 
 
 class kFoldView(object):
@@ -355,7 +376,6 @@ class kFoldBMF(kFoldEvaluator):
         self.BMF_file_prefix = self.kfold_view.kfold_folder + \
             'BMF_coverage_%0.2f' % min_coverage
 
-
     def _train_single_fold(self, i, force_train):
         train_file = self.fname_prefix + '_trained_fold_%d.pkl' % i
         BMF_file = self.BMF_file_prefix + '_fold_%d' % i
@@ -374,5 +394,3 @@ class kFoldBMF(kFoldEvaluator):
                     dump((self.RS[i].P, self.RS[i].Q), f)
             with open(train_file, 'wb') as f:
                 dump(self.RS[i], f)
-
-
