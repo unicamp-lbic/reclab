@@ -47,7 +47,7 @@ shuffle(RS_arguments)
 BMF_locks = dict([(i, Lock()) for i in coverages])
 
 database = MatrixDatabase(dbread.read_matrix())
-holdout_view = HoldoutRatingsView(database, dbread.PATH,
+holdout_view = HoldoutRatingsView(database, dbread.PATH, nsplits=5,
                                   pct_hidden=0.2, threshold=3)
 
 if not os.path.isdir(result_folder):
