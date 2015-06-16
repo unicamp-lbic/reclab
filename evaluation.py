@@ -120,7 +120,7 @@ class HoldoutRatingsView(object):
         HOLDOUT_FILE = testset_folder + \
             '/%d_pct_hidden' % (100 * pct_hidden) + \
             '_ratings_%d+' % (threshold) + \
-            '_nsplits_%d' % (nsplits) + '.pkl' 
+            '_nsplits_%d' % (nsplits) + '.pkl'
 
         if os.path.isfile(HOLDOUT_FILE):
             with open(HOLDOUT_FILE, 'rb') as f:
@@ -253,14 +253,15 @@ class HoldoutRatingsEvaluator(object):
 class HoldoutBMF(HoldoutRatingsEvaluator):
     def __init__(self, holdout_view, RS_type, RS_arguments, result_folder,
                  topk=1, threshold=3):
-        HoldoutRatingsEvaluator.__init__(self, holdout_view, RS_type, RS_arguments,
-                                         result_folder, topk, threshold)
+        HoldoutRatingsEvaluator.\
+            __init__(self, holdout_view, RS_type, RS_arguments,
+                     result_folder, topk, threshold)
 
         min_coverage = RS_arguments['min_coverage']
         threshold = RS_arguments['threshold']
         self.BMF_file = self.holdout.folder + '/' + \
             'BMF_coverage_%0.2f' % min_coverage + \
-            '_binarythreshold _%d' % threshold + \
+            '_binarythreshold_%d' % threshold + \
             '_%d_pct_hidden' % (holdout_view.pct_hidden * 100) + \
             '_nsplits_%d' % (self.holdout.nsplits)
 
