@@ -30,6 +30,7 @@ result_folder = 'results/exp_1_results/'
 RS_type = rec.BMFrecommender
 
 coverages = [1, 0.8, 0.6]
+bin_thresh = [i for i in range(0, 4)]
 
 RS_arguments = [{'neighbor_type': nn_type,
                  'offline_kNN': offline,
@@ -40,11 +41,13 @@ RS_arguments = [{'neighbor_type': nn_type,
                  'min_coverage': coverage}
                 for nn_type in ['user', 'item']
                 for nn in chain([5], range(10, 61, 10))
-                for t in range(0, 4)
+                for t in bin_thresh
                 for offline in [True, False]
                 for coverage in coverages]
 shuffle(RS_arguments)
-BMF_locks = dict([(i, Lock()) for i in coverages])
+
+BMF_locks = dict([(tup, Lock()) for tup in
+                  [(c,t) for c in coverages for t in bin_thresh]])
 
 database = MatrixDatabase(dbread.read_matrix())
 holdout_view = HoldoutRatingsView(database, dbread.PATH, nsplits=5,
@@ -55,16 +58,16 @@ if not os.path.isdir(result_folder):
 
 def run(i):
     global kfold_view, RS_type, RS_arguments, result_folder
-    min_coverage = RS_arguments[i]['min_coverage']
+    lock_key = (RS_arguments[i]['min_coverage'], RS_arguments[i]['threshold'])
     print('Running %d' % i + str(RS_arguments[i]))
     evalu = HoldoutBMF(holdout_view, RS_type, RS_arguments[i],
                        result_folder, threshold=3, topk=20)
     try:
-        BMF_locks[min_coverage].acquire()
+        BMF_locks[lock_key].acquire()
         print('Training %d' % i + str(RS_arguments[i]))
         evalu.train()
         print('Done training %d' % i + str(RS_arguments[i]))
-        BMF_locks[min_coverage].release()
+        BMF_locks[lock_key].release()
 
         print('Testing %d' % i + str(RS_arguments[i]))
         evalu.test()
