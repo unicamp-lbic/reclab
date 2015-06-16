@@ -261,12 +261,12 @@ class HoldoutBMF(HoldoutRatingsEvaluator):
             'BMF_coverage_%0.2f' % min_coverage + \
             'binarythreshold _%d' % threshold + \
             '_%d_pct_hidden' % (holdout_view.pct_hidden * 100) + \
-            '_nsplits_%d' % (i, self.holdout.nsplits)
+            '_nsplits_%d' % (self.holdout.nsplits)
 
     def train(self, force_train=False):
         train_file = self.fname_prefix + '_trained.pkl'
-        BMF_file = self.BMF_file + '_split_%d.pkl' % (i+1, self.holdout.nsplits)
         for i in range(self.holdout.nsplits):
+            BMF_file = self.BMF_file + '_split_%d.pkl' % (i+1)
             if os.path.isfile(train_file) and not force_train:
                 with open(train_file, 'rb') as f:
                     self.RS = load(f)
