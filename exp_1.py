@@ -47,7 +47,7 @@ RS_arguments = [{'neighbor_type': nn_type,
 shuffle(RS_arguments)
 
 BMF_locks = dict([(tup, Lock()) for tup in
-                  [(c,t) for c in coverages for t in bin_thresh]])
+                  [(c, t) for c in coverages for t in bin_thresh]])
 
 database = MatrixDatabase(dbread.read_matrix())
 holdout_view = HoldoutRatingsView(database, dbread.PATH, nsplits=5,
