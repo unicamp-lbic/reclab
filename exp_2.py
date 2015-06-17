@@ -34,7 +34,7 @@ result_folder = 'results/exp_2_results/'
 RS_type = rec.BMFrecommender
 
 coverages = [1, 0.8, 0.6]
-bin_thresh = [i for i in range(0, 4)]
+bin_thresh = [i for i in range(0, 5)]
 
 RS_arguments = [{'neighbor_type': nn_type,
                  'offline_kNN': offline,
