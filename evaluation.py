@@ -268,7 +268,7 @@ class HoldoutBMF(HoldoutRatingsEvaluator):
     def train(self, force_train=False):
         for i in range(self.holdout.nsplits):
             train_file = self.fname_prefix + \
-                '_split_%d(%d)' % (i, self.holdout.nsplits) + \
+                '_split_%d(%d)' % (i+1, self.holdout.nsplits) + \
                 '_trained.pkl'
             BMF_file = self.BMF_file + '_split_%d.pkl' % (i+1)
             if os.path.isfile(train_file) and not force_train:
