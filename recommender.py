@@ -48,7 +48,7 @@ class PredictionStrategy(object):
 
     def _predict(self, ratings, similarities):
         if (ratings == 0).all():
-            print('All user ratings on neighbor items are zero')
+            # print('All user ratings on neighbor items are zero')
             pred_rating = 0
         else:
             ratings = np.array(ratings, ndmin=1)
@@ -166,8 +166,8 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
             if not self.offline_kNN:
                 user_ids = self.database.get_rated_users(target_item)
                 if len(user_ids) == 0:
-                    print('No co-rating neighbor for user %d, item %d' %
-                          (target_user, target_item))
+                    # print('No co-rating neighbor for user %d, item %d' %
+                    #       (target_user, target_item))
                     return 0
                 self.kNN.fit(self.P[user_ids, :])
 
@@ -197,8 +197,8 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
             if not self.offline_kNN:
                 item_ids = self.database.get_rated_items(target_user)
                 if len(item_ids) == 0:
-                    print('No co-rating neighbor for user %d, item %d' %
-                          (target_user, target_item))
+                    # print('No co-rating neighbor for user %d, item %d' %
+                    #       (target_user, target_item))
                     return 0
                 self.kNN.fit(self.Q[item_ids, :])
 

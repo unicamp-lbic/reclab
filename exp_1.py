@@ -39,10 +39,10 @@ RS_arguments = [{'neighbor_type': nn_type,
                  'metric': 'cosine',
                  'threshold': t,
                  'min_coverage': coverage}
-                for nn_type in ['user', 'item']
+                for nn_type in ['user']
                 for nn in chain([5], range(10, 61, 10))
                 for t in bin_thresh
-                for offline in [True, False]
+                for offline in [False]
                 for coverage in coverages]
 shuffle(RS_arguments)
 
@@ -50,7 +50,7 @@ BMF_locks = dict([(tup, Lock()) for tup in
                   [(c, t) for c in coverages for t in bin_thresh]])
 
 database = MatrixDatabase(dbread.read_matrix())
-holdout_view = HoldoutRatingsView(database, dbread.PATH, nsplits=5,
+holdout_view = HoldoutRatingsView(database, dbread.PATH, nsplits=1,
                                   pct_hidden=0.2, threshold=3)
 
 if not os.path.isdir(result_folder):
@@ -72,6 +72,7 @@ def run(i):
         print('Testing %d' % i + str(RS_arguments[i]))
         evalu.test()
         print('Done testing %d' % i + str(RS_arguments[i]))
+
 
     except:
         with open(evalu.fname_prefix+'_error_log_%d.out' % i, 'w') as f:
