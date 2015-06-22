@@ -10,6 +10,7 @@ import abc
 import neighbors
 from BMF import BMF
 import numpy as np
+from utils import oneD
 from sklearn.random_projection import GaussianRandomProjection,\
                                       SparseRandomProjection
 
@@ -17,29 +18,32 @@ from sklearn.random_projection import GaussianRandomProjection,\
 class NeighborStrategy(object):
     __metaclass__ = abc.ABCMeta
 
-    def _item_strategy(self, database, target_user, distances, indices,
+    def _item_strategy(self, target_user, distances, indices,
                        zero_mean):
-        shape = len(np.array(indices, ndmin=1))
-        similarities = np.array((1.0 - distances)).reshape(shape)
-        indices = indices.reshape(shape)
-
+        indices = oneD(indices)
         if np.isscalar(target_user):
-            ratings = np.array([database.get_rating(target_user, item)
+            ratings = np.array([self.database.get_rating(target_user, item)
                                 for item in indices])
         else:
-            ratings = np.array([target_user[item] for item in indices])
-
+            ratings = np.array([target_user[item]
+                                for item in indices])
+        similarities = oneD((1.0 - distances))
+        if self.offline_kNN:
+            ratings = ratings[np.where(ratings > 0)][:self.n_neighbors]
+            similarities = \
+                similarities[np.where(ratings > 0)][:self.n_neighbors]
         return (ratings, similarities)
 
-    def _user_strategy(self, database, target_item, distances, indices,
+    def _user_strategy(self, target_item, distances, indices,
                        zero_mean):
-        shape = len(np.array(indices, ndmin=1))
-        similarities = np.array((1.0 - distances)).reshape(shape)
-        indices = indices.reshape(shape)
-
-        ratings = np.array([database.get_rating(user, target_item)
-                            for user in indices])
-
+        indices = oneD(indices)
+        ratings = np.array([self.database.get_rating(user, target_item)
+                            for user in indices], ndmin=1)
+        similarities = oneD((1.0 - distances))
+        if self.offline_kNN:
+            ratings = ratings[np.where(ratings > 0)][:self.n_neighbors]
+            similarities = \
+                similarities[np.where(ratings > 0)][:self.n_neighbors]
         return (ratings, similarities)
 
 
@@ -48,11 +52,11 @@ class PredictionStrategy(object):
 
     def _predict(self, ratings, similarities):
         if (ratings == 0).all():
-            print('All user ratings on neighbor items are zero')
+            #print('All user ratings on neighbor items are zero')
             pred_rating = 0
         else:
-            ratings = np.array(ratings, ndmin=1)
-            similarities = np.array(similarities, ndmin=1)
+            ratings = oneD(ratings)
+            similarities = oneD(similarities)
             pred_rating = np.dot(ratings, similarities) \
                 / similarities[ratings > 0].sum()
         return pred_rating
@@ -63,7 +67,9 @@ class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
                  metric='cosine'):
         self.database = None
         self.n_neighbors = n_neighbors
-        self.kNN = neighbors.kNN(n_neighbors=30*n_neighbors,
+        self.model_size = 30 * n_neighbors
+        self.offline_kNN = True
+        self.kNN = neighbors.kNN(n_neighbors=self.model_size,
                                  algorithm=algorithm, metric=metric)
 
     def fit(self, database):
@@ -75,10 +81,15 @@ class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
     def predict(self, target_user, target_item):
         item_vector = self.database.get_item_vector(target_item,
                                                     zero_mean=True)
-        distances, indices = self.kNN.kneighbors(item_vector, self.n_neighbors)
+        distances, indices = \
+            self.kNN.kneighbors(item_vector, min(self.n_neighbors,
+                                                 self.database.n_items()))
+        if len(oneD(indices)) == 0:
+            return 0
+
         ratings, similarities = \
-            self._item_strategy(self.database, target_user,
-                                distances, indices, zero_mean=False)
+            self._item_strategy(target_user, distances, indices,
+                                zero_mean=False)
 
         return self._predict(ratings, similarities)
 
@@ -108,7 +119,8 @@ class UserBased(RatingPredictor, PredictionStrategy):
 
         rating = 0
         for i, user in enumerate(indices):
-            rating += self.database.get_rating(user, target_item)*similarities[i]
+            rating += \
+                self.database.get_rating(user, target_item)*similarities[i]
         rating /= similarities.sum()
 
         return rating
@@ -163,54 +175,52 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
 
     def predict(self, target_user, target_item):
         if self.neighbor_type == 'user':
-            if not self.offline_kNN:
-                user_ids = self.database.get_rated_users(target_item)
-                if len(user_ids) == 0:
-                    print('No co-rating neighbor for user %d, item %d' %
-                          (target_user, target_item))
-                    return 0
-                self.kNN.fit(self.P[user_ids, :])
-
             if np.isscalar(target_user):
                 user_vector = self.P[target_user, :]
             else:
                 user_vector = self.transform(target_user)
 
             if not self.offline_kNN:
+                user_ids = self.database.get_rated_users(target_item)
+                if len(user_ids) == 0:
+                    #print('No co-rating neighbor for user %d, item %d' %
+                    #      (target_user, target_item))
+                    return 0
+                self.kNN.fit(self.P[user_ids, :])
                 distances, indices = \
                     self.kNN.kneighbors(user_vector,
                                         min(self.n_neighbors, len(user_ids)))
+                indices = np.array([user_ids[i] for i in oneD(indices)])
+
             else:
                 distances, indices = \
-                    self.kNN.kneighbors(user_vector, self.n_neighbors)
-
-            indices = indices.reshape(indices.shape[1])
-
-            if not self.offline_kNN:
-                indices = np.array([user_ids[i] for i in indices])
+                    self.kNN.kneighbors(user_vector,
+                                        min(self.n_neighbors,
+                                            self.database.n_users()))
 
             ratings, similarities = \
-                self._user_strategy(self.database, target_item,
-                                    distances, indices, zero_mean=False)
+                self._user_strategy(target_item, distances, indices,
+                                    zero_mean=False)
 
         elif self.neighbor_type == 'item':
-            if not self.offline_kNN:
-                item_ids = self.database.get_rated_items(target_user)
-                if len(item_ids) == 0:
-                    print('No co-rating neighbor for user %d, item %d' %
-                          (target_user, target_item))
-                    return 0
-                self.kNN.fit(self.Q[item_ids, :])
-
             item_vector = self.Q[target_item, :]
 
             if not self.offline_kNN:
+                item_ids = self.database.get_rated_items(target_user)
+                if len(item_ids) == 0:
+                    #print('No co-rating neighbor for user %d, item %d' %
+                    #      (target_user, target_item))
+                    return 0
+                self.kNN.fit(self.Q[item_ids, :])
+
                 distances, indices = \
                     self.kNN.kneighbors(item_vector,
                                         min(self.n_neighbors, len(item_ids)))
             else:
-                distances, indices = self.kNN.kneighbors(item_vector,
-                                                         self.n_neighbors)
+                distances, indices = \
+                    self.kNN.kneighbors(item_vector,
+                                        min(self.n_neighbors,
+                                            self.database.n_items()))
 
             ratings, similarities = \
                 self._item_strategy(self.database, target_user,

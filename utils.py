@@ -8,6 +8,9 @@ import os
 import numpy as np
 
 
+def oneD(array):
+    return np.array(array.squeeze(), ndmin=1)
+
 def _get_zero_mean_matrix(matrix, along='users'):
     rows, cols = matrix.shape
     if along == 'users':
