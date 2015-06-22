@@ -38,7 +38,7 @@ RS_arguments = [{'neighbor_type': nn_type,
                  'metric': 'cosine',
                  'threshold': t,
                  'min_coverage': coverage}
-                for nn_type in ['user', 'item']
+                for nn_type in ['user']
                 for nn in chain([5], range(10, 61, 10))
                 for t in bin_thresh
                 for coverage in coverages]

@@ -32,10 +32,10 @@ RS_arguments = [{'neighbor_type': nn_type,
                  'metric': 'cosine',
                  'threshold': t,
                  'min_coverage': coverage}
-                for nn_type in ['user', 'item']
-                for nn in chain([5], range(10, 61, 10))
+                for nn_type in ['user']
+                for nn in  [10,20,30,40]#chain([5], range(10, 61, 10))
                 for t in bin_thresh
-                for offline in [True, False]
+                for offline in [False]
                 for coverage in coverages]
 
 
