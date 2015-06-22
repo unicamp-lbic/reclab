@@ -25,7 +25,7 @@ if 'parallel' in set(sys.argv):
 else:
     PARALLEL = False
 
-result_folder = 'results/exp_1_results/train/'
+result_folder = 'results/exp_1_results/'
 RS_type = rec.BMFrecommender
 
 coverages = [1, 0.8, 0.6]
@@ -58,14 +58,9 @@ def run(i):
     evalu = HoldoutBMF(holdout_view, RS_type, RS_arguments[i],
                        result_folder, threshold=3, topk=20)
     try:
-
         print('Training %d' % i + str(RS_arguments[i]))
         evalu.train()
         print('Done training %d' % i + str(RS_arguments[i]))
-
-        print('Testing %d' % i + str(RS_arguments[i]))
-        evalu.test()
-        print('Done testing %d' % i + str(RS_arguments[i]))
 
     except:
         with open(evalu.fname_prefix+'_error_log_%d.out' % i, 'w') as f:
