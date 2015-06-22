@@ -68,4 +68,3 @@ def run(i):
 
 for i in range(len(RS_arguments)):
     run(i)
-    break
