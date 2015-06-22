@@ -149,6 +149,7 @@ class HoldoutRatingsView(object):
             [[(database.get_matrix()[u, i], u, i) for u, i in split]
              for split in self.hidden_coord]
 
+
 class HoldoutRatingsMetrics(object):
     def __init__(self, RS, test_set, topk, threshold):
         self.test_set = test_set
@@ -246,19 +247,20 @@ class HoldoutRatingsEvaluator(object):
                 with open(train_file, 'wb') as f:
                     dump(self.RS, f)
 
-    def test(self, parallel=False):
-        metrics = []
-        for i in range(self.holdout.nsplits):
-            evalu = \
-                HoldoutRatingsMetrics(self.RS, self.holdout.test_set[i],
-                                      self.topk, self.threshold)
-            metrics.append(evalu.calc_metrics(parallel=parallel))
-        metrics_labels = evalu.columns()
-        metrics = np.array(metrics)
-        np.savetxt(self.fname_prefix+'_test.txt', metrics.T, delimiter=',',
-                   header=','.join(['"'+l+'"' for l in metrics_labels]))
+    def test(self, parallel=False, force_test=False):
+        test_file = self.fname_prefix+'_test.txt'
+        if not os.path.isfile(test_file) or force_test:
+            metrics = []
+            for i in range(self.holdout.nsplits):
+                evalu = \
+                    HoldoutRatingsMetrics(self.RS, self.holdout.test_set[i],
+                                          self.topk, self.threshold)
+                metrics.append(evalu.calc_metrics(parallel=parallel))
+            metrics_labels = evalu.columns()
+            metrics = np.array(metrics)
+            np.savetxt(test_file, metrics.T, delimiter=',',
+                       header=','.join(['"'+l+'"' for l in metrics_labels]))
 
-        return metrics
 
 class HoldoutBMF(HoldoutRatingsEvaluator):
     def __init__(self, holdout_view, RS_type, RS_arguments, result_folder,
@@ -369,13 +371,15 @@ class kFoldEvaluator(object):
         self.metrics_labels = evalu.columns()
         return metrics
 
-    def test(self):
-        metrics = []
-        for i in range(len(self.RS)):
-            metrics.append(self._test_single_fold(i))
-        metrics = np.array(metrics)
-        metrics = pd.DataFrame(metrics, columns=self.metrics_labels)
-        metrics.to_csv(self.fname_prefix+'_test.txt')
+    def test(self, force_test=False):
+        test_file = self.fname_prefix+'_test.txt'
+        if not os.path.isfile(test_file) or force_test:
+            metrics = []
+            for i in range(len(self.RS)):
+                metrics.append(self._test_single_fold(i))
+            metrics = np.array(metrics)
+            metrics = pd.DataFrame(metrics, columns=self.metrics_labels)
+            metrics.to_csv(test_file)
         return metrics
 
 
