@@ -11,6 +11,7 @@ import os
 from pickle import dump, load
 from numpy.random import choice
 from databases import SubDatabase, HiddenRatingsDatabase
+from multiprocessing_on_dill import Pool
 
 
 class Evaluator(object):
@@ -148,7 +149,6 @@ class HoldoutRatingsView(object):
             [[(database.get_matrix()[u, i], u, i) for u, i in split]
              for split in self.hidden_coord]
 
-
 class HoldoutRatingsMetrics(object):
     def __init__(self, RS, test_set, topk, threshold):
         self.test_set = test_set
@@ -179,15 +179,25 @@ class HoldoutRatingsMetrics(object):
     def columns():
         return ['P','R','F1','MAE','RMSE']
 
-    def calc_metrics(self):
+    def calc_metrics(self, parallel=False):
         total_hits = 0
         sum_absErr = 0
         sum_sqErr = 0
-        for rating, user, item in self.test_set:
-            hit, absErr = self._metrics_single_rating(rating, user, item)
-            total_hits += hit
-            sum_absErr += absErr
-            sum_sqErr += absErr**2
+        if parallel:
+            pool = Pool()
+            run = lambda tup: self._metrics_single_rating(*tup)
+            results = pool.map(run, self.test_set)
+            pool.close()
+            pool.join()
+            total_hits = sum([hit for hit, absErr in results])
+            sum_absErr = sum([absErr for hit, absErr in results])
+            sum_sqErr  = sum([absErr**2 for hit, absErr in results])
+        else:
+            for rating, user, item in self.test_set:
+                hit, absErr = self._metrics_single_rating(rating, user, item)
+                total_hits += hit
+                sum_absErr += absErr
+                sum_sqErr += absErr**2
         # According to Cremonesi et al. 2010
         # Recall = #hits/|test set|
         # Precision = #hits/(topk * |test set|) = recall/topk
@@ -236,13 +246,13 @@ class HoldoutRatingsEvaluator(object):
                 with open(train_file, 'wb') as f:
                     dump(self.RS, f)
 
-    def test(self):
+    def test(self, parallel=False):
         metrics = []
         for i in range(self.holdout.nsplits):
             evalu = \
                 HoldoutRatingsMetrics(self.RS, self.holdout.test_set[i],
                                       self.topk, self.threshold)
-            metrics.append(evalu.calc_metrics())
+            metrics.append(evalu.calc_metrics(parallel=parallel))
         metrics_labels = evalu.columns()
         metrics = np.array(metrics)
         np.savetxt(self.fname_prefix+'_test.txt', metrics.T, delimiter=',',
