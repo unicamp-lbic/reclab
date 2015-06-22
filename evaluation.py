@@ -283,6 +283,7 @@ class HoldoutBMF(HoldoutRatingsEvaluator):
                 '_split_%d(%d)' % (i+1, self.holdout.nsplits) + \
                 '_trained.pkl'
             BMF_file = self.BMF_file + '_split_%d.pkl' % (i+1)
+
             if os.path.isfile(train_file) and not force_train:
                 with open(train_file, 'rb') as f:
                     self.RS = load(f)
@@ -345,12 +346,12 @@ class kFoldEvaluator(object):
         self.threshold = threshold
         self.fname_prefix = result_folder + '/' \
             + _gen_name(RS_type, RS_arguments)\
-            + '_%d_folds' % self.n_folds \
-            + '_%0.2f_pct_hidden' % self.pct_hidden \
+            + '_%d_pct_hidden' % (self.pct_hidden * 100) \
+            + '_nfolds_%d' % self.n_folds \
             + '_top_%d_threshold_%d' % (self.topk, self.threshold)
 
     def _train_single_fold(self, i, force_train):
-        train_file = self.fname_prefix + '_trained_fold_%d.pkl'%i
+        train_file = self.fname_prefix + '_trained_fold_%d.pkl' % (i+1)
         if os.path.isfile(train_file) and not force_train:
             with open(train_file, 'rb') as f:
                 self.RS[i] = load(f)
@@ -392,11 +393,14 @@ class kFoldBMF(kFoldEvaluator):
 
         min_coverage = RS_arguments['min_coverage']
         self.BMF_file_prefix = self.kfold_view.kfold_folder + \
-            'BMF_coverage_%0.2f' % min_coverage
+            'BMF_coverage_%0.2f' % min_coverage + \
+            '_binarythreshold_%d' % threshold + \
+            '_%d_pct_hidden' % (self.kfold_view.pct_hidden * 100) + \
+            '_nfolds_%d' % (self.n_folds)
 
     def _train_single_fold(self, i, force_train):
-        train_file = self.fname_prefix + '_trained_fold_%d.pkl' % i
-        BMF_file = self.BMF_file_prefix + '_fold_%d' % i
+        train_file = self.fname_prefix + '_fold_%d_trained.pkl' % (i+1)
+        BMF_file = self.BMF_file_prefix + '_fold_%d.pkl' % (i+1)
 
         if os.path.isfile(train_file) and not force_train:
             with open(train_file, 'rb') as f:
