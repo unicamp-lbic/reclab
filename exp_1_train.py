@@ -11,7 +11,7 @@ Reproduce BMF results from Nenova et al (2013)
 
 import data.MovieLens100k.dbread as dbread
 from databases import MatrixDatabase
-from evaluation import HoldoutBMF, HoldoutRatingsView
+from evaluation import kFoldView, kFoldBMF
 import recommender as rec
 from multiprocessing import Pool
 from itertools import chain
@@ -32,7 +32,7 @@ coverages = [1, 0.8, 0.6]
 bin_thresh = [i for i in range(0, 5)]
 
 RS_arguments = [{'neighbor_type': nn_type,
-                 'offline_kNN': False,
+                 'offline_kNN': True,
                  'n_neighbors': nn,
                  'algorithm': 'brute',
                  'metric': 'cosine',
@@ -45,8 +45,8 @@ RS_arguments = [{'neighbor_type': nn_type,
 
 
 database = MatrixDatabase(dbread.read_matrix())
-holdout_view = HoldoutRatingsView(database, dbread.PATH, nsplits=1,
-                                  pct_hidden=0.2, threshold=3)
+kfold_view = kFoldView(database, dbread.PATH, n_folds=5,
+                       pct_hidden=0.1, threshold=3)
 
 if not os.path.isdir(result_folder):
     os.makedirs(result_folder)
@@ -55,11 +55,11 @@ if not os.path.isdir(result_folder):
 def run(i):
     global kfold_view, RS_type, RS_arguments, result_folder
     print('Running %d' % i + str(RS_arguments[i]))
-    evalu = HoldoutBMF(holdout_view, RS_type, RS_arguments[i],
-                       result_folder, threshold=3, topk=20)
+    evalu = kFoldBMF(kfold_view, RS_type, RS_arguments[i],
+                     result_folder, threshold=3, topk=20)
     try:
         print('Training %d' % i + str(RS_arguments[i]))
-        evalu.train()
+        evalu._train_single_fold(0)
         print('Done training %d' % i + str(RS_arguments[i]))
 
     except:
