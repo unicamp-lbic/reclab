@@ -14,15 +14,19 @@ from evaluation import kFoldView, kFoldEvaluator,\
     HoldoutRatingsEvaluator, HoldoutRatingsView
 import recommender as rec
 from multiprocessing import Pool
+import os
 
 PARALLEL = False
 
 result_folder = 'results/exp_0_results/'
+if not os.path.isdir(result_folder):
+    os.makedirs(result_folder)
+
 RS_types = [rec.ItemBased,
             rec.BMFrecommender,
             rec.BMFRPrecommender]
 
-database = TestDB(50, 100, min_items=0.5)
+database = TestDB(50, 100, min_items=0.2)
 kfold_view = kFoldView(database, result_folder, n_folds=2)
 holdout_view = HoldoutRatingsView(database, result_folder,
                                   pct_hidden=0.2, threshold=4)
@@ -44,7 +48,7 @@ def run(i):
     evalu.train(force_train=True)
     print('Done!')
     print('Testing...')
-    evalu.test()
+    evalu.test(parallel=True)
     print('Done!')
 
 
