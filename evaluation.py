@@ -71,17 +71,17 @@ class Evaluator(object):
 
         # Calculate precision and recall
         # r and Ihid
-        pred_hidden = set(hidden) & set(rlist)
+        rec_hidden = set(hidden) & set(rlist)
         # r and u and Ihid
-        pred_hidden_positives = pred_hidden & set(hidden_positives)
+        rec_hidden_positives = rec_hidden & set(hidden_positives)
         # Recall:
         if len(hidden_positives) > 0:
-            recall = len(pred_hidden_positives)/float(len(hidden_positives))
+            recall = len(rec_hidden_positives)/float(len(hidden_positives))
         else:
             recall = 1.0
         # Precision:
-        if len(pred_hidden) > 0:
-            precision = len(pred_hidden_positives)/float(len(pred_hidden))
+        if len(rec_hidden) > 0:
+            precision = len(rec_hidden_positives)/float(len(rec_hidden))
         elif len(u_positives) == 0:
             precision = 1.0
         else:
@@ -93,7 +93,7 @@ class Evaluator(object):
 
         # Calculate MAE and RMSE
         deviations = np.array([user_vector[i]-predictions[i]
-                               for i in pred_hidden])
+                               for i in rec_hidden])
         MAE = np.mean(deviations)
         RMSE = np.sqrt(np.mean(deviations**2))
 
@@ -381,7 +381,7 @@ class kFoldEvaluator(object):
             metrics = np.array(metrics)
             metrics = pd.DataFrame(metrics, columns=self.metrics_labels)
             metrics.to_csv(test_file)
-        return metrics
+
 
 
 class kFoldBMF(kFoldEvaluator):
