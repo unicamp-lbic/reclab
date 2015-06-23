@@ -12,6 +12,7 @@ from pickle import dump, load
 from numpy.random import choice
 from databases import SubDatabase, HiddenRatingsDatabase
 from multiprocessing_on_dill import Pool
+from collections import defaultdict
 
 
 class Evaluator(object):
@@ -38,8 +39,7 @@ class Evaluator(object):
 
     @staticmethod
     def columns():
-        return ['P','R','F1','MAE','RMSE']
-
+        return ['P', 'R', 'F1', 'MAE', 'RMSE']
 
     def avg_all_users(self):
         result = [self.single_user(user) for user in self.test_set]
@@ -47,13 +47,12 @@ class Evaluator(object):
         result /= len(self.test_set)
         return result
 
-
     def single_user(self, user_vector):
         u_positives, u_negatives = self._split_positive_negative(user_vector)
 
         # Hide some items to check on them later
         random_pick = lambda aList: list(
-                   choice(aList,
+            choice(aList,
                    np.ceil(self.pct_hidden*len(aList)),
                    replace=False)) if aList != [] else aList
         hidden_positives = random_pick(u_positives)  # u and Ihid
@@ -104,12 +103,13 @@ class Evaluator(object):
 def _gen_name(RS_type, RS_arguments):
     name = [RS_type.__name__]
     arguments = \
-        sorted([(arg.replace('_',''), val)
+        sorted([(arg.replace('_', ''), val)
                 for arg, val in RS_arguments.items()])
     for k, i in arguments:
         name.append(str(k))
         name.append(str(i))
     return '_'.join(name)
+
 
 class HoldoutRatingsView(object):
     def __init__(self, database, testset_folder, nsplits=1,
@@ -158,47 +158,45 @@ class HoldoutRatingsMetrics(object):
         self.threshold = threshold
         self.test_set = test_set
 
-    def _metrics_single_rating(self, user_id, item_id, true_rating):
+    def _absErr_single_rating(self, user_id, item_id, true_rating):
+        pred_rating = self.RS.predict(user_id, item_id)
+        absErr = np.abs(pred_rating - true_rating)
+        return absErr
+
+    def _hits_single_user(self, user_id, hidden_items):
         unrated = self.RS.database.get_unrated_items(user_id)
         qtty_candidates = min(np.ceil(0.1*self.RS.database.n_items()), 1000)
         candidate_items = choice(unrated, size=qtty_candidates,
-                                 replace=False).tolist() + [item_id]
+                                 replace=False).tolist() + hidden_items
 
         rlist = self.RS.recommend(user_id, how_many=self.topk,
                                   threshold=self.threshold,
                                   candidate_items=candidate_items)
-
         rlist = dict(rlist)
-        hit = 1 if item_id in rlist else 0
-
-        pred_rating = self.RS.predict(user_id, item_id)
-        absErr = np.abs(pred_rating - true_rating)
-
-        return hit, absErr
+        hit = 0
+        for item_id in hidden_items:
+            hit += 1 if item_id in rlist else 0
+        return hit
 
     @staticmethod
     def columns():
-        return ['P','R','F1','MAE','RMSE']
+        return ['P', 'R', 'F1', 'MAE', 'RMSE']
 
-    def calc_metrics(self, parallel=False):
+    def calc_metrics(self):
         total_hits = 0
         sum_absErr = 0
         sum_sqErr = 0
-        if parallel:
-            pool = Pool()
-            run = lambda tup: self._metrics_single_rating(*tup)
-            results = pool.map(run, self.test_set)
-            pool.close()
-            pool.join()
-            total_hits = sum([hit for hit, absErr in results])
-            sum_absErr = sum([absErr for hit, absErr in results])
-            sum_sqErr  = sum([absErr**2 for hit, absErr in results])
-        else:
-            for rating, user, item in self.test_set:
-                hit, absErr = self._metrics_single_rating(rating, user, item)
-                total_hits += hit
-                sum_absErr += absErr
-                sum_sqErr += absErr**2
+
+        users = defaultdict(list)
+        for rating, user, item in self.test_set:
+            users[user].append(item)
+            absErr = self._absErr_single_rating(rating, user, item)
+            sum_absErr += absErr
+            sum_sqErr += absErr**2
+
+        for u, hidden_items in users.items():
+            total_hits += self._hits_single_user(u, hidden_items)
+
         # According to Cremonesi et al. 2010
         # Recall = #hits/|test set|
         # Precision = #hits/(topk * |test set|) = recall/topk
@@ -247,7 +245,7 @@ class HoldoutRatingsEvaluator(object):
                 with open(train_file, 'wb') as f:
                     dump(self.RS, f)
 
-    def test(self, parallel=False, force_test=False):
+    def test(self, force_test=False):
         test_file = self.fname_prefix+'_test.txt'
         if not os.path.isfile(test_file) or force_test:
             metrics = []
@@ -255,7 +253,7 @@ class HoldoutRatingsEvaluator(object):
                 evalu = \
                     HoldoutRatingsMetrics(self.RS, self.holdout.test_set[i],
                                           self.topk, self.threshold)
-                metrics.append(evalu.calc_metrics(parallel=parallel))
+                metrics.append(evalu.calc_metrics())
             metrics_labels = evalu.columns()
             metrics = np.array(metrics)
             np.savetxt(test_file, metrics.T, delimiter=',',

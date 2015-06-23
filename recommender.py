@@ -149,9 +149,22 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
         self.offline_kNN = offline_kNN
 
     def transform(self, user_vector):
-        user_vector = np.array(user_vector, ndmin=2)
-        return np.dot(np.dot(user_vector, self.Q),
-                      self.transform_matrix)
+        items = set(np.where(user_vector > self.threshold)[0])
+        factors = [(set(line), i) for i, line in enumerate(self.Q.T)]
+        factors = [f for f in factors if f[0].issubset(items)]
+        factors = [(len(f.intersection(items)),)+ f  for f in factors]
+        factors.sort()
+        user_factors = []
+        for cov, factor, idx in factors:
+            if len(items) == 0:
+                break
+            new = items.diference(factor)
+            if len(new) < len(items):
+                items = new
+                user_factors.append(idx)
+        user_vector = [1 if i in user_factors else 0
+                       for i in range(self.P.shape[1])]
+        return np.array(user_vector)
 
     def fit(self, database, P=None, Q=None):
         self.database = database
