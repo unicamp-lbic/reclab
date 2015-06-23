@@ -136,7 +136,6 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
         self.min_coverage = min_coverage
         self.P = None
         self.Q = None
-        self.transform_matrix = None
         self.n_neighbors = n_neighbors
 
         if offline_kNN:
@@ -147,23 +146,32 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
         self.kNN = neighbors.kNN(n_neighbors=self.model_size,
                                  algorithm=algorithm, metric=metric)
         self.offline_kNN = offline_kNN
+        self.kNN_graph = None
 
     def transform(self, user_vector):
-        items = set(np.where(user_vector > self.threshold)[0])
-        factors = [(set(line), i) for i, line in enumerate(self.Q.T)]
-        factors = [f for f in factors if f[0].issubset(items)]
-        factors = [(len(f.intersection(items)),)+ f  for f in factors]
-        factors.sort()
+        items = set(np.where(oneD(user_vector) > self.threshold)[0])
+        orig_len = len(items)
+        factors = [(set(np.where(line == 1)[0]), i)
+                   for i, line in enumerate(self.Q.T)]
         user_factors = []
-        for cov, factor, idx in factors:
-            if len(items) == 0:
-                break
-            new = items.diference(factor)
-            if len(new) < len(items):
-                items = new
-                user_factors.append(idx)
-        user_vector = [1 if i in user_factors else 0
+        for f, i in factors:
+            if f.issubset(items):
+                user_factors.append(i)
+                items.difference_update(f)
+        user_vector = [1 if i in set(user_factors) else 0
                        for i in range(self.P.shape[1])]
+        if len(items)/orig_len > (1 - self.min_coverage):
+            factors = [(len(f.intersection(items))/len(f.union(items)), f, i)
+                       for f, i in factors]
+            factors.sort(reverse=True)
+            for jac, factor, idx in factors:
+                if len(items) == 0:
+                    break
+                new = items.difference(factor)
+                if len(new) < len(items):
+                    items = new
+                    user_vector[idx] = jac
+
         return np.array(user_vector)
 
     def fit(self, database, P=None, Q=None):
@@ -183,7 +191,6 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
             else:
                 raise ValueError('Invalid neighbor_type "%s" parameter passed \
                                  to constructor' % self.neighbor_type)
-        self.transform_matrix = np.linalg.pinv(np.dot(self.Q.T, self.Q))
         return self
 
     def predict(self, target_user, target_item):
