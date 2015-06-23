@@ -27,7 +27,7 @@ RS_types = [rec.ItemBased,
             rec.BMFRPrecommender]
 
 database = TestDB(50, 100, min_items=0.2)
-kfold_view = kFoldView(database, result_folder, n_folds=2)
+kfold_view = kFoldView(database, result_folder, n_folds=3)
 holdout_view = HoldoutRatingsView(database, result_folder,
                                   pct_hidden=0.2, threshold=4)
 
@@ -40,7 +40,7 @@ def run(i):
     evalu.train(force_train=True)
     print('Done!')
     print('Testing...')
-    evalu.test()
+    evalu.test(force_test=True)
     print('Done!')
     evalu = HoldoutRatingsEvaluator(holdout_view, RS_types[i], {},
                                     result_folder, threshold=3, topk=10)
@@ -48,7 +48,7 @@ def run(i):
     evalu.train(force_train=True)
     print('Done!')
     print('Testing...')
-    evalu.test(parallel=True)
+    evalu.test(force_test=True)
     print('Done!')
 
 
