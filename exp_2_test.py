@@ -14,10 +14,6 @@ import os
 import sys
 import traceback
 
-if 'parallel' in set(sys.argv):
-    PARALLEL = True
-else:
-    PARALLEL = False
 
 result_folder = 'results/exp_1_results/'
 RS_type = rec.BMFrecommender
@@ -58,7 +54,7 @@ def run(i):
         print('Done training %d' % i + str(RS_arguments[i]))
 
         print('Testing %d' % i + str(RS_arguments[i]))
-        evalu.test(parallel=PARALLEL)
+        evalu.test()
         print('Done testing %d' % i + str(RS_arguments[i]))
 
     except:
