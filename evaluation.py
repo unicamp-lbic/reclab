@@ -144,7 +144,7 @@ class HoldoutRatingsView(object):
         self.train_set = \
             [HiddenRatingsDatabase(database.get_matrix(), split)
              for split in self.hidden_coord]
-
+        # saved in order :(rating, user, item)
         self.test_set = \
             [[(database.get_matrix()[u, i], u, i) for u, i in split]
              for split in self.hidden_coord]
@@ -190,7 +190,7 @@ class HoldoutRatingsMetrics(object):
         users = defaultdict(list)
         for rating, user, item in self.test_set:
             users[user].append(item)
-            absErr = self._absErr_single_rating(rating, user, item)
+            absErr = self._absErr_single_rating(user, item, rating)
             sum_absErr += absErr
             sum_sqErr += absErr**2
 
