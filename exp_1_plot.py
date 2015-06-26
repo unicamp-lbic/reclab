@@ -13,12 +13,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-path = 'results/exp_1_results/test/'
-result = read_results(path)
+path = 'results/exp_1_results/'
+result = read_results(path, meanstd=False)
+
 colors = 'bgrcmyk'
 result = pd.DataFrame.from_dict(result)
 
-
+#%%
 """
 Plots of metrics by number of neighbors
 """

@@ -33,7 +33,7 @@ def _get_zero_mean_matrix(matrix, along='users'):
     return matrix, mean_vals
 
 
-def read_result(fname, path=''):
+def read_result(fname, path='', meanstd=True):
     splitted = fname[:fname.find('pct')-4].split('_')
     params = {'RStype': splitted[0]}
     for i in range(1, len(splitted)-1, 2):
@@ -49,16 +49,17 @@ def read_result(fname, path=''):
     header = header.replace('#', '').replace('"', '').replace(' ', '')\
         .replace('\n', '').split(',')
     header = header + [h+'(std)' for h in header]
-    result = np.loadtxt(path + fname, delimiter=',')
-    result = np.hstack((result.mean(axis=1), result.std(axis=1)))
+    result = np.loadtxt(path + fname, delimiter=',', ndmin=2)
+    if meanstd:
+        result = np.hstack((result.mean(axis=1), result.std(axis=1)))
     result = dict(zip(header, result))
     result.update(params)
     return result
 
 
-def read_results(path=''):
-    fnames = os.listdir(path)
+def read_results(path='', meanstd=True):
+    fnames = [f for f in os.listdir(path) if f.find('test.txt') > -1]
     result = []
     for fname in fnames:
-        result.append(read_result(fname, path))
+        result.append(read_result(fname, path, meanstd=meanstd))
     return result
