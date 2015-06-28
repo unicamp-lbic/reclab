@@ -184,15 +184,16 @@ class HoldoutRatingsMetrics(object):
 
     def calc_metrics(self):
         total_hits = 0
-        sum_absErr = 0
-        sum_sqErr = 0
+        MAE = 0
+        MSE = 0
 
         users = defaultdict(list)
         for rating, user, item in self.test_set:
             users[user].append(item)
             absErr = self._absErr_single_rating(user, item, rating)
-            sum_absErr += absErr
-            sum_sqErr += absErr**2
+            MAE += absErr/len(self.test_set)
+            MSE += absErr**2/len(self.test_set)
+
 
         for u, hidden_items in users.items():
             total_hits += self._hits_single_user(u, hidden_items)
@@ -208,8 +209,8 @@ class HoldoutRatingsMetrics(object):
             F1 = precision*recall/(precision+recall)
         else:
             F1 = 0.0
-        MAE = sum_absErr/len(self.test_set)
-        RMSE = np.sqrt(sum_sqErr)/len(self.test_set)
+
+        RMSE = np.sqrt(MSE)
 
         metrics = np.array([precision, recall, F1, MAE, RMSE])
         return metrics
