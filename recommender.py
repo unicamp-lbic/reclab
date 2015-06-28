@@ -303,5 +303,4 @@ class BMFRPrecommender(BMFrecommender):
         else:
             raise ValueError('Invalid neighbor_type parameter passed to\
                              constructor')
-        self.transform_matrix = np.linalg.pinv(np.dot(self.Q.T, self.Q))
         return self
