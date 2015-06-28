@@ -26,7 +26,7 @@ else:
     PARALLEL = False
 
 result_folder = 'results/exp_3_results/'
-RS_type = rec.BMFrecommender
+RS_type = rec.BMFRPrecommender
 
 coverages = [1, 0.8, 0.6]
 bin_thresh = [i for i in range(0, 5)]
