@@ -200,8 +200,10 @@ class HoldoutRatingsMetrics(object):
         # According to Cremonesi et al. 2010
         # Recall = #hits/|test set|
         # Precision = #hits/(topk * |test set|) = recall/topk
+        # Here I have done one rec list per user, not per rating in test, so
+        # Precision should be #hits/(topk * |users in test set|)
         recall = total_hits/len(self.test_set)
-        precision = recall/self.topk
+        precision = total_hits/(self.topk*len(users))
         if precision+recall > 0:
             F1 = precision*recall/(precision+recall)
         else:
