@@ -274,8 +274,15 @@ class BMFRPrecommender(BMFrecommender):
     def fit(self, database, P=None, Q=None):
         self.database = database
 
+        mf = BMF()
+        if P is None or Q is None:
+            self.P, self.Q = \
+                mf.fit(self.database.get_matrix(threshold=self.threshold))
+        else:
+            self.set_bmf(P, Q)
+
         if self.dim_red != 'auto':
-            n_components = int(np.ceil(self.dim_red*self.database.n_users()))
+            n_components = int(np.ceil(self.dim_red*self.P.shape[1]))
         else:
             n_components = self.dim_red
 
@@ -284,12 +291,6 @@ class BMFRPrecommender(BMFrecommender):
         elif self.RP == 'sparse':
             self.RP = SparseRandomProjection(n_components=n_components)
 
-        mf = BMF()
-        if P is None or Q is None:
-            self.P, self.Q = \
-                mf.fit(self.database.get_matrix(threshold=self.threshold))
-        else:
-            self.set_bmf(P, Q)
 
         if self.neighbor_type == 'user':
             self.P = self.RP.fit_transform(self.P)
