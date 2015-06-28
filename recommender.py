@@ -57,8 +57,11 @@ class PredictionStrategy(object):
         else:
             ratings = oneD(ratings)
             similarities = oneD(similarities)
-            pred_rating = np.dot(ratings, similarities) \
-                / similarities[ratings > 0].sum()
+            denominator = similarities[ratings > 0].sum()
+            if denominator != 0:
+                pred_rating = np.dot(ratings, similarities)/denominator
+            else:
+                pred_rating = 0
         return pred_rating
 
 
