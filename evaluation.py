@@ -183,7 +183,6 @@ class HoldoutRatingsMetrics(object):
         return ['P', 'R', 'F1', 'MAE', 'RMSE']
 
     def calc_metrics(self):
-        total_hits = 0
         MAE = 0
         MSE = 0
 
@@ -193,24 +192,22 @@ class HoldoutRatingsMetrics(object):
             absErr = self._absErr_single_rating(user, item, rating)
             MAE += absErr/len(self.test_set)
             MSE += absErr**2/len(self.test_set)
-
-
-        for u, hidden_items in users.items():
-            total_hits += self._hits_single_user(u, hidden_items)
-
-        # According to Cremonesi et al. 2010
-        # Recall = #hits/|test set|
-        # Precision = #hits/(topk * |test set|) = recall/topk
-        # Here I have done one rec list per user, not per rating in test, so
-        # Precision should be #hits/(topk * |users in test set|)
-        recall = total_hits/len(self.test_set)
-        precision = total_hits/(self.topk*len(users))
-        if precision+recall > 0:
-            F1 = precision*recall/(precision+recall)
-        else:
-            F1 = 0.0
-
         RMSE = np.sqrt(MSE)
+
+        recall = 0
+        precision = 0
+        F1 = 0
+        for u, hidden_items in users.items():
+            hits = self._hits_single_user(u, hidden_items)
+            r = hits/len(hidden_items)
+            p = hits/self.topk
+            if r+p > 0:
+                f1 = r*p/(r+p)
+            else:
+                f1 = 0
+            recall += r/len(users)
+            precision += p/len(users)
+            F1 += f1/len(users)
 
         metrics = np.array([precision, recall, F1, MAE, RMSE])
         return metrics
