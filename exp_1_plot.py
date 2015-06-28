@@ -43,4 +43,24 @@ for n, nntype in enumerate(['user']):
     plt.tight_layout()
     plt.suptitle('BMF %s-based'%nntype)
     plt.show()
+
 #%%
+for n, nntype in enumerate(['user']):
+    plt.figure(n, figsize=(12,6))
+    for i, metric in enumerate(['P','R','F1','RMSE','MAE']):
+        for j, threshold in enumerate(range(5)):
+            plt.subplot(2, 3, i+1)
+            data = result[result.threshold == threshold]\
+                [result.mincoverage==1]\
+                [result.neighbortype==nntype]
+            data.sort('nneighbors', inplace=True)
+            x = data['nneighbors'].values
+            y = data[metric].values
+            plt.plot(x,y, marker='+', color=colors[j],
+                     label='BMF t=%d' % threshold)
+            plt.legend(loc='best', fontsize='small', framealpha=0.5)
+            plt.title(metric)
+            plt.xlabel('nbr of neighbors')
+    plt.tight_layout()
+    plt.suptitle('BMF %s-based'%nntype)
+    plt.show()
