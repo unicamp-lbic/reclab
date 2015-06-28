@@ -20,11 +20,6 @@ import sys
 import traceback
 
 
-if 'parallel' in set(sys.argv):
-    PARALLEL = True
-else:
-    PARALLEL = False
-
 result_folder = 'results/exp_3_results/'
 RS_type = rec.BMFrecommender
 
@@ -64,13 +59,14 @@ def run(i):
         evalu.train()
         print('Done training %d' % i + str(RS_arguments[i]))
 
+        print('Testing %d' % i + str(RS_arguments[i]))
+        evalu.test()
+        print('Done testing %d' % i + str(RS_arguments[i]))
+
+
     except:
         with open(evalu.fname_prefix+'_error_log_%d.out' % i, 'w') as f:
             traceback.print_exception(*sys.exc_info(), file=f)
 
-if PARALLEL:
-    pool = Pool()
-    pool.map(run, range(len(RS_arguments)))
-else:
-    for i in range(len(RS_arguments)):
-        run(i)
+for i in range(len(RS_arguments)):
+    run(i)
