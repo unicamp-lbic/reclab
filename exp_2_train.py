@@ -38,7 +38,7 @@ bin_thresh = [i for i in range(0, 5)]
 RS_arguments = [{'neighbor_type': nn_type,
                  'offline_kNN': False,
                  'n_neighbors': nn,
-                 'algorithm': 'brute',
+                 'algorithm': 'LSH',
                  'metric': 'cosine',
                  'threshold': t,
                  'min_coverage': coverage}

@@ -15,7 +15,7 @@ import sys
 import traceback
 
 
-result_folder = 'results/exp_1_results/'
+result_folder = 'results/exp_2_results/'
 RS_type = rec.BMFrecommender
 
 coverages = [1, 0.8, 0.6]
@@ -24,7 +24,7 @@ bin_thresh = [i for i in range(0, 5)]
 RS_arguments = [{'neighbor_type': nn_type,
                  'offline_kNN': offline,
                  'n_neighbors': nn,
-                 'algorithm': 'brute',
+                 'algorithm': 'LSH',
                  'metric': 'cosine',
                  'threshold': t,
                  'min_coverage': coverage}
