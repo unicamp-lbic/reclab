@@ -6,6 +6,7 @@ Created on Mon Apr 27 12:07:20 2015
 """
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def oneD(array):
@@ -63,3 +64,38 @@ def read_results(path='', meanstd=True):
     for fname in fnames:
         result.append(read_result(fname, path, meanstd=meanstd))
     return result
+
+
+def plot_metric(metric, varpar, across, dataframe, select,
+                labelfmt='%s', labelmul=1):
+    data = dataframe
+    for key, value in select.items():
+        data = data[data[key] == value]
+
+    varpar_name, varpar_values = varpar
+    across, across_label = across
+    for value in varpar_values:
+        this_data = data[data[varpar_name] == value]
+        this_data.sort(across, inplace=True)
+        x = this_data[across].values
+        y = this_data[this_data[varpar_name] == value][metric].values
+        plt.plot(x, y, marker='+', label=labelfmt % (value*labelmul))
+    plt.legend(loc='best', fontsize='small', framealpha=0.5)
+    plt.title(metric)
+    plt.xlabel(across_label)
+
+
+def plot_metrics(metrics, varpar, across, dataframe, select, labelfmt='%s',
+                 labelmul=1, suptitle=None):
+
+    width = int(np.ceil(np.sqrt(len(metrics))))
+    height = int(np.ceil(len(metrics)/width))
+    plt.figure(figsize=(4*width,3*height))
+    for i, metric in enumerate(metrics):
+        plt.subplot(height, width, i+1)
+        plot_metric(metric, varpar, across, dataframe, select,
+                    labelfmt, labelmul)
+    plt.tight_layout()
+    if suptitle is not None:
+        plt.suptitle(suptitle)
+
