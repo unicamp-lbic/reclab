@@ -9,7 +9,7 @@ import pandas as pd
 from sklearn.cross_validation import KFold
 import os
 from pickle import dump, load
-from numpy.random import choice
+from numpy.random import choice, seed
 from databases import SubDatabase, HiddenRatingsDatabase
 from multiprocessing_on_dill import Pool
 from collections import defaultdict
@@ -166,6 +166,8 @@ class HoldoutRatingsMetrics(object):
     def _hits_single_user(self, user_id, hidden_items):
         unrated = self.RS.database.get_unrated_items(user_id)
         qtty_candidates = min(np.ceil(0.1*self.RS.database.n_items()), 1000)
+        # want the user to be evaluated in the same way every time
+        seed(user_id)
         candidate_items = choice(unrated, size=qtty_candidates,
                                  replace=False).tolist() + hidden_items
 
