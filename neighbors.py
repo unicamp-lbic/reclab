@@ -24,7 +24,7 @@ class kNN(object):
                 raise ValueError('LSH forest can only use cosine metric')
             self.estimator = \
                 LSHForest(n_estimators=10, radius=1.0,
-                          n_candidates=50, n_neighbors=n_neighbors,
+                          n_candidates=10*n_neighbors, n_neighbors=n_neighbors,
                           min_hash_match=4, radius_cutoff_ratio=0.9,
                           random_state=None)
 
