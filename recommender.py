@@ -246,7 +246,7 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
                                             self.database.n_items()))
 
             ratings, similarities = \
-                self._item_strategy(self.database, target_user,
+                self._item_strategy(target_user,
                                     distances, indices, zero_mean=False)
 
         return self._predict(ratings, similarities)
