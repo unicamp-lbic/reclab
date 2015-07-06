@@ -6,12 +6,12 @@ Created on Wed Apr 29 12:21:08 2015
 """
 import abc
 from collections import Counter
-from base import BaseEnsemble
-from Recommender import BMFRPrecommender
+from base import BaseEnsemble, RatingPredictor
+from recommender import BMFRPrecommender
 import numpy as np
 
 
-class RatingEnsemble(BaseEnsemble):
+class RatingEnsemble(BaseEnsemble, RatingPredictor):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
@@ -27,7 +27,7 @@ class ListEnsemble(BaseEnsemble):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def _list_ensemble_strategy(rec_lists):
+    def _list_ensemble_strategy(self, rec_lists):
         pass
 
     def recommend(self, target_user, how_many, threshold):
@@ -39,8 +39,11 @@ class ListEnsemble(BaseEnsemble):
 
 
 class MajorityEnsemble(ListEnsemble):
-    def __init__(self, RS_list):
-        self.RS_list = RS_list
+    def __init__(self, **varargs):
+        RS_factory = varargs['RS_factory']
+        RS_args = varargs
+        del RS_args['RS_factory']
+        self.RS_list = RS_factory(**RS_args)
 
     def _list_ensemble_strategy(self, rec_lists):
         item_votes = Counter()
@@ -50,8 +53,11 @@ class MajorityEnsemble(ListEnsemble):
 
 
 class RankSumEnsemble(ListEnsemble):
-    def __init__(self, RS_list):
-        self.RS_list = RS_list
+    def __init__(self, **varargs):
+        RS_factory = varargs['RS_factory']
+        RS_args = varargs
+        del RS_args['RS_factory']
+        self.RS_list = RS_factory(**RS_args)
 
     def _list_ensemble_strategy(self, rec_lists):
         rank_sum = Counter()
@@ -62,27 +68,23 @@ class RankSumEnsemble(ListEnsemble):
 
 
 class AvgRatingEnsemble(RatingEnsemble):
-    def __init__(self, database, RS_list):
-        self.RS_list = RS_list
+    def __init__(self, **varargs):
+        RS_factory = varargs['RS_factory']
+        RS_args = varargs
+        del RS_args['RS_factory']
+        self.RS_list = RS_factory(**RS_args)
 
-    def _rating_ensemble_strategy(ratings):
+    def _rating_ensemble_strategy(self, ratings):
         return np.mean(ratings)
 
 
-class RPBMFEnsembleFactory(BaseEnsemble):
-    def __init__(self, ensemble_type, RP_type,
-                 n_projections=5, dim_range=(0.3, 0.5),
-                 BMF_args):
+def RPBMFEnsembleFactory(RP_type='sparse', n_projections=5,
+                         dim_range=(0.25, 0.75), **BMF_args):
 
-        dim_red = np.linspace(dim_range[0], dim_range[1], n_projections)
-        self.RS_list = []
-        for i in range(n_projections):
-            self.RS_list.append(
-                BMFRPrecommender(RP_type=RP_type, dim_red=dim_red[i],
-                                 **BMF_args))
-
-        self.ensemble_type = ensemble_type
-
-
-    def get_ensemble(self):
-       return self.ensemble_type(RS_list=self.RS_list)
+    dim_red = np.linspace(dim_range[0], dim_range[1], n_projections)
+    RS_list = []
+    for i in range(n_projections):
+        RS_list.append(
+            BMFRPrecommender(RP_type=RP_type, dim_red=dim_red[i],
+                             **BMF_args))
+    return RS_list

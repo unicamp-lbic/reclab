@@ -130,7 +130,7 @@ class UserBased(RatingPredictor, PredictionStrategy):
 
 
 class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
-    def __init__(self, neighbor_type='user', offline_kNN=True,
+    def __init__(self, neighbor_type='user', offline_kNN=False,
                  n_neighbors=10, algorithm='brute', metric='cosine',
                  threshold=0, min_coverage=1.0):
         self.database = None
@@ -258,12 +258,8 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
 
 class BMFRPrecommender(BMFrecommender):
     def __init__(self, RP_type='sparse', dim_red=0.5,
-                 neighbor_type='user', offline_kNN=True,
-                 n_neighbors=10, algorithm='brute',
-                 metric='cosine', threshold=0, min_coverage=1.0):
-        BMFrecommender.__init__(self, neighbor_type=neighbor_type,
-                                algorithm=algorithm, metric=metric,
-                                threshold=threshold, min_coverage=min_coverage)
+                 **BMF_args):
+        BMFrecommender.__init__(self, **BMF_args)
         self.dim_red = dim_red
         self.RP = RP_type
 

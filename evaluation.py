@@ -107,7 +107,8 @@ def _gen_name(RS_type, RS_arguments):
                 for arg, val in RS_arguments.items()])
     for k, i in arguments:
         name.append(str(k))
-        name.append(str(i))
+        if callable(i): name.append(i.__name__)
+        else:name.append(str(i))
     return '_'.join(name)
 
 
@@ -268,8 +269,8 @@ class HoldoutBMF(HoldoutRatingsEvaluator):
         HoldoutRatingsEvaluator.\
             __init__(self, holdout_view, RS_type, RS_arguments,
                      result_folder, topk, threshold)
-
-        min_coverage = RS_arguments['min_coverage']
+        try: min_coverage = RS_arguments['min_coverage']
+        except KeyError: min_coverage = 1
         threshold = RS_arguments['threshold']
         self.BMF_file = self.holdout.folder + '/' + \
             'BMF_coverage_%0.2f' % min_coverage + \
@@ -291,7 +292,7 @@ class HoldoutBMF(HoldoutRatingsEvaluator):
                 if os.path.isfile(BMF_file) and not force_train:
                     with open(BMF_file, 'rb') as f:
                         P, Q = load(f)
-                    self.RS.fit(self.holdout.train_set[i], P, Q)
+                    self.RS.fit(self.holdout.train_set[i], P=P, Q=Q)
 
                 else:
                     self.RS.fit(self.holdout.train_set[i])
