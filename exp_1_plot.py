@@ -28,7 +28,7 @@ Plots of metrics by number of neighbors
 """
 
 select = {'RStype': 'BMFrecommender',
-          'threshold': 3 ,
+          'threshold': 3,
           'offlinekNN': 'False',
           'neighbortype': 'user',
           'algorithm': 'brute',
@@ -69,9 +69,23 @@ for key, value in select_BMF.items():
 data['RStype'] = 'BMFRPrecommender'
 data['dimred'] = 1
 result = pd.concat((result, data), ignore_index=True)
-#%%
+#%
 plot_metrics(all_metrics,
              varpar=('dimred', [0.25, 0.5, 0.75,1]),
              across=('nneighbors', 'num. de vizinhos'),
              dataframe=result, select=select,
              labelfmt='%d%%|D|', labelmul=100)
+#%%
+select = {'RStype': 'BMFrecommender',
+          'mincoverage': 1 ,
+          'threshold': 3,
+          'neighbortype': 'user',
+          'metric': 'cosine'}
+data = result
+for key, value in select.items():
+    data = data[data[key] == value]
+plot_metrics(all_metrics,
+             varpar=('algorithm', ['brute', 'LSH']),
+             across=('nneighbors', 'num. de vizinhos'),
+             dataframe=result, select=select,
+             labelfmt='kNN %s')
