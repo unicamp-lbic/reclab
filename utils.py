@@ -65,12 +65,15 @@ def read_results(path='', meanstd=True):
         result.append(read_result(fname, path, meanstd=meanstd))
     return result
 
-
-def plot_metric(metric, varpar, across, dataframe, select,
-                labelfmt='%s', labelmul=1):
+def pd_select(dataframe, select):
     data = dataframe
     for key, value in select.items():
         data = data[data[key] == value]
+    return data
+
+def plot_metric(metric, varpar, across, dataframe, select,
+                labelfmt='%s', labelmul=1):
+    data = pd_select(dataframe, select)
 
     varpar_name, varpar_values = varpar
     across, across_label = across
@@ -96,6 +99,7 @@ def plot_metrics(metrics, varpar, across, dataframe, select, labelfmt='%s',
         plot_metric(metric, varpar, across, dataframe, select,
                     labelfmt, labelmul)
     plt.tight_layout()
+    plt.subplots_adjust(top=0.9)
     if suptitle is not None:
         plt.suptitle(suptitle)
 
