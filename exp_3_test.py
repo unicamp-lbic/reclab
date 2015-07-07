@@ -26,7 +26,8 @@ RS_type = rec.BMFRPrecommender
 coverages = [1, 0.8, 0.6]
 bin_thresh = [i for i in range(0, 5)]
 
-RS_arguments = [{'neighbor_type': nn_type,
+RS_arguments = [{'RP_type': rp,
+                 'neighbor_type': nn_type,
                  'offline_kNN': False,
                  'n_neighbors': nn,
                  'algorithm': 'brute',
@@ -34,6 +35,7 @@ RS_arguments = [{'neighbor_type': nn_type,
                  'threshold': t,
                  'min_coverage': coverage,
                  'dim_red' : dims}
+                for rp in ['sparse', 'gaussian']
                 for nn_type in ['user', 'item']
                 for nn in chain([5], range(10, 61, 10))
                 for t in bin_thresh
