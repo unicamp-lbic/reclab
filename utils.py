@@ -82,6 +82,8 @@ def plot_metric(metric, varpar, across, dataframe, select,
         this_data.sort(across, inplace=True)
         x = this_data[across].values
         y = this_data[this_data[varpar_name] == value][metric].values
+        if metric == 'F1':
+            y *= 2
         plt.plot(x, y, marker='+', label=labelfmt % (value*labelmul))
     plt.legend(loc='best', fontsize='small', framealpha=0.5)
     plt.title(metric)
