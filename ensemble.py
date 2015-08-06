@@ -30,11 +30,15 @@ class ListEnsemble(BaseEnsemble):
     def _list_ensemble_strategy(self, rec_lists):
         pass
 
-    def recommend(self, target_user, how_many, threshold):
+    def predict(self, target_user, target_item):
+        return 0
+
+    def recommend(self, target_user, **rec_args):
         recommendations = []
         for RS in self.RS_list:
-            rec_list = RS.recommend(target_user, how_many, threshold)
+            rec_list = RS.recommend(target_user, **rec_args)
             recommendations.append(rec_list)
+        how_many = rec_args['how_many']
         return self._list_ensemble_strategy(recommendations)[:how_many]
 
 
