@@ -13,17 +13,18 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 
+from itertools import chain
 
 matplotlib.rcParams['ps.useafm'] = True
 matplotlib.rcParams['pdf.use14corefonts'] = True
 
-outdir = '/home/thalita/Dropbox/Mestrado/RelatorioParcial/relatorio_tex/fig/'
+outdir = '/tmp/'
 #%%
 result = []
-for i in range(1,4+1):
+for i in range(1,3+1):
     path = 'results/exp_%d_results/' % i
     result += read_results(path, meanstd=False)
-
+result+=read_results('results/exp_4.1_results/', meanstd=False)
 colors = 'bgrcmyk'
 result = pd.DataFrame.from_dict(result)
 all_metrics = ['P','R','F1','RMSE','MAE']
@@ -251,3 +252,39 @@ plot_metrics(all_metrics,
              dataframe=result, select=select,
              labelfmt='RP %s',
              suptitle='Recomendação Ensemble BMF+RP esparsa vs. RP gaussiana - BMF 100% e limiar 3')
+#%% Exp 4.1
+select = {'RSfactory': 'factory',
+          'RPtype': 'gaussian',
+          #'mincoverage': 1 ,
+          'threshold': 3 ,
+          #'offlinekNN': 'False',
+          #'neighbortype': 'user',
+          #'algorithm': 'brute',
+          #'metric': 'cosine'
+          }
+select_BMF = dict(select)
+del select_BMF['RPtype']
+del select_BMF['RSfactory']
+select_BMF['RStype'] = 'BMFrecommender'
+select_BMF.update({'mincoverage': 1 ,
+                   'offlinekNN': 'False',
+                   'neighbortype': 'user',
+                   'algorithm': 'brute',
+                   'metric': 'cosine'
+                   })
+data = pd_select(result, select_BMF)
+data['RSfactory'] = 'factory'
+data['RPtype'] = 'gaussian'
+tmp = pd.concat((result, data), ignore_index=True)
+print(pd_select(tmp, select))
+
+plot_metrics(all_metrics,
+             varpar=('RStype', ['AvgRatingEnsemble',
+                                #'MajorityEnsemble',
+                                #'RankSumEnsemble',
+                                'BMFrecommender'
+                                ]),
+             across=('nneighbors', 'num. de vizinhos'),
+             dataframe=tmp, select=select,
+             labelfmt='%s',
+             suptitle='Recomendação Ensemble BMF+RP gaussiana - BMF 100% e limiar 3\nRed 25,50,75,80,90%')
