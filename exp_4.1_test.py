@@ -25,7 +25,7 @@ from pickle import load
 
 RP_folder = 'results/exp_3_results/'
 trained_models = [RP_folder + f for f in os.listdir(RP_folder)
-                  if f.find('.out') > -1]
+                  if f.find('trained.pkl') > -1]
 
 result_folder = 'results/exp_4.1_results/'
 database = MatrixDatabase(dbread.read_matrix())
@@ -39,48 +39,50 @@ RS_type = [ens.AvgRatingEnsemble, ens.RankSumEnsemble, ens.MajorityEnsemble]
 dim_red = [0.25, 0.5, 0.75, 0.8, 0.9]
 nneighbor = chain([5], range(10,61,10))
 RP_type = ['sparse', 'gaussian']
+neighbor_type = ['user','item']
+args = [(nn, rp, nntype)
+        for nn in nneighbor
+        for rp in RP_type
+        for nntype in neighbor_type]
 
-args = [(nn, rp) for nn in nneighbor for rp in RP_type]
-for nn, rp in args:
+for nn, rp, nntype in args:
     files = [f for f in trained_models
-             if f.find('nneighbor_%d'%nn) > -1
-             if f.find('RPtype_%s'%rp) > -1]
-    RS_list = []
-    for d in dim_red:
-        try:
+             if f.find('nneighbors_%d'%nn) > -1
+             if f.find('RPtype_%s'%rp) > -1
+             if f.find('neighbortype_%s'%nntype) > -1]
+    if files != []:
+        RS_list = []
+        for d in dim_red:
             fname = [f for f in files
                      if f.find('dimred_%d'%d) > -1][0]
             with open(fname, 'rb') as f:
-                RS_list.append(load(fname))
-        except IndexError:
-            pass
+                RS_list.append(load(f))
 
-    def factory(**RS_args):
-        global RS_list
-        return RS_list
 
-    RS_arguments = {'RS_factory': factory,
-                    'n_neighbors': nn,
-                    'threshold': 3,
-                    'RP_type': rp}
+        def factory(**RS_args):
+            global RS_list
+            return RS_list
 
-    def run(i):
-        print('Running %d' % i + str(RS_type[i]))
-        evalu = HoldoutBMF(holdout_view, RS_type[i], RS_arguments,
-                           result_folder, threshold=3, topk=20)
+        RS_arguments = {'RS_factory': factory,
+                        'n_neighbors': nn,
+                        'threshold': 3,
+                        'RP_type': rp}
 
-        print('Training %d' % i + str(RS_type[i]))
-        evalu.train()
-        print('Done training %d' % i + str(RS_type[i]))
+        for i in range(len(RS_type)):
+            print('Running %d' % i + str(RS_type[i]))
+            evalu = HoldoutBMF(holdout_view, RS_type[i], RS_arguments,
+                               result_folder, threshold=3, topk=20)
 
-        print('Testing %d' % i + str(RS_type[i]))
-        evalu.test()
-        print('Done testing %d' % i + str(RS_type[i]))
-        try:
-            pass
-        except:
-            with open(evalu.fname_prefix+'_error_log_%d.out' % i, 'w') as f:
-                traceback.print_exception(*sys.exc_info(), file=f)
+            print('Training %d' % i + str(RS_type[i]))
+            evalu.train()
+            print('Done training %d' % i + str(RS_type[i]))
 
-    for i in range(len(RS_type)):
-        run(i)
+            print('Testing %d' % i + str(RS_type[i]))
+            evalu.test()
+            print('Done testing %d' % i + str(RS_type[i]))
+            try:
+                pass
+            except:
+                with open(evalu.fname_prefix+'_error_log_%d.out' % i, 'w') as f:
+                    traceback.print_exception(*sys.exc_info(), file=f)
+
