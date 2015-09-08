@@ -22,7 +22,7 @@ matplotlib.rcParams['pdf.use14corefonts'] = True
 outdir = '/tmp/'
 #%%
 result = []
-for i in range(1,3+1):
+for i in range(1,4+1):
     path = 'results/exp_%d_results/' % i
     result += read_results(path, meanstd=False)
 colors = 'bgrcmyk'
