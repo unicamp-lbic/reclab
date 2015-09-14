@@ -6,7 +6,9 @@ Created on Wed Apr 22 14:23:23 2015
 """
 import abc
 from heapq import heappush, heappop
+from scipy import sparse
 import numpy as np
+import pickle as pkl
 
 class BaseDatabase(object):
     __metaclass__ = abc.ABCMeta
@@ -79,6 +81,16 @@ class BaseRecommender(object):
         "return recomendation list for target_user"
         return
 
+    @abc.abstractmethod
+    def save_model(self):
+        pass
+
+    def save_all_recomendations(self, filepath):
+        lists = []
+        for user in range(self.database.n_users()):
+            lists.append(self.recommend(user))
+        with open(filepath, 'wb') as f:
+            pkl.dump((lists, self.__dict__), f)
 
 class RatingPredictor(BaseRecommender):
     __metaclass__ = abc.ABCMeta
@@ -113,6 +125,46 @@ class RatingPredictor(BaseRecommender):
             pred_rating, item = heappop(ratings)
             rec_list.append((item, -pred_rating))
         return rec_list
+
+
+class SavedRecommender(RatingPredictor):
+    def __init__(self):
+        self.pred_ratings = []
+        self.lists = []
+        self.config = None
+
+    def load(self, filepath):
+        with open(filepath, 'rb') as f:
+            self.lists, self.config = pkl.load(f)
+        data = []
+        rows = []
+        cols = []
+        for user in self.lists:
+            for item, rating in self.lists[user]:
+                rows.append(user)
+                cols.append(item)
+                data.append(rating)
+        self.pred_ratings = sparse.coo_matrix((data, (rows, cols)))
+
+    def predict(self, target_user, target_item):
+        return self.pred_ratings[target_user, target_item]
+
+    def recommend(self, target_user, how_many=np.inf, threshold=0,
+                  candidate_items=None):
+        if candidate_items is not None:
+            candidate_items = set(candidate_items)
+            rec_list = self.lists[target_user]
+            out_list = []
+            count = 0
+            for item, rating in rec_list:
+                if item in candidate_items and rating > threshold:
+                    out_list.append((item, rating))
+                    count += 1
+                if count >= how_many:
+                    break
+        else:
+            out_list = self.lists[target_user]
+        return out_list
 
 
 class BaseEnsemble(BaseRecommender):
