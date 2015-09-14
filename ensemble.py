@@ -7,6 +7,7 @@ Created on Wed Apr 29 12:21:08 2015
 import abc
 from collections import Counter
 from base import BaseEnsemble, RatingPredictor
+from scipy.stats import kendalltau
 from recommender import BMFRPrecommender
 import numpy as np
 
@@ -39,7 +40,8 @@ class ListEnsemble(BaseEnsemble):
             rec_list = RS.recommend(target_user, **rec_args)
             recommendations.append(rec_list)
         how_many = rec_args['how_many']
-        return self._list_ensemble_strategy(recommendations)[:how_many]
+        lists =  self._list_ensemble_strategy(recommendations)[:how_many]
+        return lists
 
 
 class MajorityEnsemble(ListEnsemble):
@@ -66,7 +68,8 @@ class RankSumEnsemble(ListEnsemble):
     def _list_ensemble_strategy(self, rec_lists):
         rank_sum = Counter()
         for rec_list in rec_lists:
-            for i, item_id in enumerate(rec_list):
+            for i, item_rating in enumerate(rec_list):
+                item_id, rating = item_rating
                 rank_sum[item_id] -= i
         return rank_sum.most_common()
 
