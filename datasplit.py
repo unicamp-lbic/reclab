@@ -8,11 +8,12 @@ import abc
 import pickle as pkl
 import numpy as np
 from sklearn.cross_validation import KFold
-from database import HiddenRatingsDatabase
+from databases import HiddenRatingsDatabase
+from collections import defaultdict
 
 
 class Split(object):
-    def _init_(self, train, test, config):
+    def __init__(self, train, test, config):
         self.train = train
         self.test = test
         self.config = config
@@ -50,25 +51,31 @@ class Splitter(object):
         pass
 
     def save(self, filepath):
-        self.config = self.__dict__
-        split = Split(self.train, self.test, self.config)
-        with open(filepath + self.suffix + '_split.pkl', 'wb') as f:
-            pkl.dump(split, f)
+        if self.nfolds == 1:
+            split = Split(self.train, self.test, self.config)
+            with open(filepath + self.suffix + '_split.pkl', 'wb') as f:
+                pkl.dump(split, f)
+        else:
+            for i in range(self.nfolds):
+                config = self.config
+                config['fold'] = i
+                split = Split(self.train, self.test, config)
+                fname = filepath + self.suffix + '_split_%d.pkl' % i
+                with open(fname, 'wb') as f:
+                    pkl.dump(split, f)
 
 
 class kFoldRatingSplitter(Splitter):
     def __init__(self, nfolds=5, per_user=True):
         self.per_user = per_user
         self.nfolds = nfolds
+        self.suffix = '_%dfold' % self.nfolds
+        self.config = {'nfolds': nfolds, 'per_user': per_user}
         self.hidden_coord = [[] for i in range(nfolds)]
         self.train = None
         self.test = None
-        self.config = None
-        self.suffix = '_%dfold' % self.nfolds
-
 
     def split(self, database):
-        self.shape = database.get_matrix().shape
         if self.per_user:
             for u in range(database.n_users()):
                 item_ratings = database.get_rating_list(u)
@@ -84,10 +91,14 @@ class kFoldRatingSplitter(Splitter):
         self.train = \
             [HiddenRatingsDatabase(database.get_matrix(), split)
              for split in self.hidden_coord]
-        # saved in order :(rating, user, item)
-        self.test = \
-            [[(database.get_matrix()[u, i], u, i) for u, i in split]
-             for split in self.hidden_coord]
+
+        self.test = []
+        for split in self.hidden_coord:
+            users = defaultdict(list)
+            for u, i in split:
+                r = database.get_matrix()[u, i]
+                users[u].append((i, r))
+            self.test.append(users)
 
 
 class HoldoutRatingSplitter(Splitter):
@@ -95,13 +106,14 @@ class HoldoutRatingSplitter(Splitter):
         self.per_user = per_user
         self.pct_hidden = pct_hidden
         self.threshold = threshold
+        self.nfolds = 1
+        self.suffix = '%d_%d_holdout' % (int((1-pct_hidden)*100),
+                                         int(pct_hidden*100))
+        self.config = {'nfolds': nfolds, 'per_user': per_user,
+                       'pct_hidden': pct_hidden, 'threshold': threshold}
         self.hidden_coord = []
         self.train = None
         self.test = None
-        self.config = None
-        self.nfolds = 1
-        self.suffix = '%d_%d_holdout' % (int((1-pct_hidden)*100),
-                                                   int(pct_hidden*100))
 
     def _get_hidden(self, matrix):
         # get positions equal to or above threshold (ratings)
@@ -113,20 +125,20 @@ class HoldoutRatingSplitter(Splitter):
         return (row[hidden_idx], col[hidden_idx])
 
     def split(self, database):
-
         matrix = np.array(database.get_matrix())
-        self.shape = matrix.shape
         if self.per_user:
             for u, user_vector in enumerate(matrix):
                 rows, cols = self._get_hidden(user_vector)
                 self.hidden_coord += list(zip(rows, cols))
         else:
             rows, cols = self._get_hidden(matrix)
-            self.hidden_coord =  list(zip(rows, cols))
+            self.hidden_coord = list(zip(rows, cols))
 
         self.train = \
             HiddenRatingsDatabase(database.get_matrix(), self.hidden_coord)
-        # saved in order :(rating, user, item)
-        self.test = \
-            [(database.get_matrix()[u, i], u, i) for u, i in self.hidden_coord]
+
+        self.test = defaultdict(list)
+        for u, i in self.hidden_coord:
+            r = database.get_matrix()[u, i]
+            self.test[u].append((i, r))
 

@@ -10,6 +10,7 @@ from scipy import sparse
 import numpy as np
 import pickle as pkl
 
+
 class BaseDatabase(object):
     __metaclass__ = abc.ABCMeta
 
@@ -42,7 +43,7 @@ class BaseDatabase(object):
     @abc.abstractmethod
     def get_item_vector(self, item_id):
         "return a 2D array with item ratings"
-        return self.matrix[:,item_id]
+        return self.matrix[:, item_id]
 
     @abc.abstractmethod
     def get_unrated_items(self, user_id):
@@ -63,7 +64,6 @@ class BaseDatabase(object):
                 if rating > 0]
 
 
-
 class BaseRecommender(object):
     __metaclass__ = abc.ABCMeta
 
@@ -82,15 +82,13 @@ class BaseRecommender(object):
         return
 
     @abc.abstractmethod
-    def save_model(self):
+    def save(self):
         pass
 
-    def save_all_recomendations(self, filepath):
-        lists = []
-        for user in range(self.database.n_users()):
-            lists.append(self.recommend(user))
-        with open(filepath, 'wb') as f:
-            pkl.dump((lists, self.__dict__), f)
+    @abc.abstractmethod
+    def load(self):
+        pass
+
 
 class RatingPredictor(BaseRecommender):
     __metaclass__ = abc.ABCMeta
@@ -105,9 +103,9 @@ class RatingPredictor(BaseRecommender):
         return
 
     def recommend(self, target_user, how_many=np.inf, threshold=0,
-                  candidate_items = None):
+                  candidate_items=None):
         unrated = self.database.get_unrated_items(target_user) \
-                  if candidate_items is None else candidate_items
+            if candidate_items is None else candidate_items
         ratings = []
         for item in unrated:
             # add tuples (-rating, item) to min heap
@@ -127,11 +125,21 @@ class RatingPredictor(BaseRecommender):
         return rec_list
 
 
-class SavedRecommender(RatingPredictor):
+class SavedRecommendations(RatingPredictor):
     def __init__(self):
         self.pred_ratings = []
         self.lists = []
         self.config = None
+        self.database = None
+
+    def save(self, filepath, RS):
+        lists = []
+        for user in range(RS.database.n_users()):
+            lists.append(RS.recommend(user))
+        with open(filepath, 'wb') as f:
+            config = RS.__dict__
+            del config['database']
+            pkl.dump((lists, config), f)
 
     def load(self, filepath):
         with open(filepath, 'rb') as f:

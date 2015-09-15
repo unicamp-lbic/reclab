@@ -128,8 +128,14 @@ class UserBased(RatingPredictor, PredictionStrategy):
 
         return rating
 
+class MFrecomender(RatingPredictor):
+    __metaclass__ = abc.ABCMeta
 
-class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
+    def load_mf(self, P, Q):
+        self.P = P
+        self.Q = Q
+
+class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
     def __init__(self, neighbor_type='user', offline_kNN=False,
                  n_neighbors=10, algorithm='brute', metric='cosine',
                  threshold=0, min_coverage=1.0):
@@ -251,9 +257,7 @@ class BMFrecommender(RatingPredictor, NeighborStrategy, PredictionStrategy):
 
         return self._predict(ratings, similarities)
 
-    def set_bmf(self, P, Q):
-        self.P = P
-        self.Q = Q
+
 
 
 class BMFRPrecommender(BMFrecommender):
