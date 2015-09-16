@@ -10,6 +10,11 @@ from base import SavedRecommendations
 from datasplit import Split
 
 
+MF_SUFFIX = '_mf.pkl'
+TRAIN_SUFFIX = '_train.pkl'
+TEST_SUFFIX = '_rec.pkl'
+
+
 def load_split(split_fname_prefix, fold=None):
     if fold is None:
         fname =  split_fname_prefix + '_split.pkl'
@@ -21,36 +26,40 @@ def load_split(split_fname_prefix, fold=None):
 
     return split
 
+
 def gen_mf(split, filepath, MFclass, **MFparams):
     mf = MFclass(**MFparams)
     matrices = mf.fit(split.train.get_matrix())
-    with open(filepath, 'wb') as f:
+
+    fname = filepath + MF_SUFFIX
+    with open(fname, 'wb') as f:
         pkl.dump(matrices, f)
 
+
 def load_mf(filepath, RS):
-    with open(filepath, 'rb') as f:
+    with open(filepath + MF_SUFFIX, 'rb') as f:
         matrices = pkl.load(f)
     RS.load_mf(matrices)
     return RS
 
-def train_save(RS, split, out_filepath, load_MF = None):
+def train_save(RS, split, out_filepath):
     RS.fit(split.train)
-    RS.save(out_filepath)
+    RS.save(out_filepath+TRAIN_SUFFIX)
 
-def test_save(RS, model_filepath, out_filepath):
-    RS.load(model_filepath)
+
+def test_save(RS, out_filepath):
+    RS.load(out_filepath+TRAIN_SUFFIX)
     rec = SavedRecommendations()
-    rec.save(RS, out_filepath)
+    rec.save(RS, out_filepath+TEST_SUFFIX)
+
 
 class Metrics(object):
-    def __init__(self, split):
+    def __init__(self, split, filepath):
         self.RS = SavedRecommendations()
+        self.RS.load(filepath+TEST_SUFFIX)
         self.split = split
         self.test_set = self.split.test
         self.metrics = dict()
-
-    def load_RS(self, filepath):
-        self.RS.load(filepath)
 
     def _hits_single_user(self, user_id, atN):
         hidden_items = [i_id for i_id, rating in self.test_set[user_id]]
