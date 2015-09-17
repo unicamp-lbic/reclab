@@ -49,7 +49,7 @@ Add entry to experiments database
 '''
 EXP_ID = exp_db.get_id(conf)
 if EXP_ID is None:
-    EXP_ID = time.strftime('%Y%m%d%H%M%S') + '_%s' % args.config
+    EXP_ID = time.strftime('%Y%m%d%H%M%S')
     exp_db.add_experiment(EXP_ID, conf)
 
 RESULT_FOLDER = './results/' + EXP_ID + '/'
@@ -75,15 +75,14 @@ if split_fname_prefix is None:
 
     splitter.split(database)
     split_fname_prefix = splitter.save(data.get_db_path(conf.database))
-# Save split fname prefix on this experiment's entry
-exp_db.set_arg_val(EXP_ID, 'split_fname_prefix', split_fname_prefix)
-
 
 
 '''
 Run experiment
 '''
 for fold in range(conf.nfolds):
+    # Save split fname prefix on this experiment's entry
+    exp_db.set_arg_val(EXP_ID, 'split_fname_prefix', split_fname_prefix)
     FOLD_PREFIX =  'fold_%d' % fold
     FOLD_PATH = RESULT_FOLDER + FOLD_PREFIX
     if conf.nfolds == 1:
@@ -102,7 +101,6 @@ for fold in range(conf.nfolds):
             exp_db.set_fold_arg_val(EXP_ID, fold, 'MF_file_prefix', MF_file_prefix)
             RS = evalu.load_mf(MF_file_prefix, RS)
         # train and save
-        train_file_prefix = exp_db.get_fold_arg_val(EXP_ID, fold, 'train_file_prefix', conf)
         evalu.train_save(RS, split, FOLD_PATH)
         exp_db.set_fold_arg_val(EXP_ID, fold, 'train_file_prefix', FOLD_PATH)
 

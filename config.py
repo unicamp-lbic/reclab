@@ -29,14 +29,25 @@ class Config(object):
             self.MF_type = RS_type.__MF_type__
             self.MF_args = RS_type.__MF_args__(RS_args)
 
-
     def as_dict(self):
         d = self.__dict__.copy()
+        keys = list(d.keys())
+        for key in keys:
+            if d[key] is None:
+                del d[key]
+
         del d['RS_args']
+        d['RS_type'] = d['RS_type'].__name__
         d.update(self.RS_args)
         return d
 
-IB_basic = Config(
+dummy5fold = Config(
+    database='ml100k',
+    RS_type=rec.DummyRecommender,
+    nfolds=5
+)
+
+IB5fold = Config(
     database='ml100k',
     RS_type=rec.ItemBased,
     RS_args={'n_neighbors': 20,
@@ -46,7 +57,7 @@ IB_basic = Config(
     is_MF=False
 )
 
-BMF_basic = Config(
+BMF5fold = Config(
     database='ml100k',
     RS_type=rec.BMFrecommender,
     RS_args={'n_neighbors': 20,
@@ -66,6 +77,7 @@ BMF_basic = Config(
 Dictionary of valid configuration settings
 '''
 valid_configs = {
-    'BMF_basic': BMF_basic,
-    'IB_basic': IB_basic
+    'BMF5fold': BMF5fold,
+    'IB5fold': IB5fold,
+    'dummy5fold': dummy5fold
 }

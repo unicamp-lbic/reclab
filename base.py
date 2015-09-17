@@ -8,6 +8,7 @@ import abc
 from heapq import heappush, heappop
 from scipy import sparse
 import numpy as np
+import pandas as pd
 import pickle as pkl
 
 
@@ -82,12 +83,15 @@ class BaseRecommender(object):
         return
 
     @abc.abstractmethod
-    def save(self):
-        pass
+    def save(self, filepath):
+        d = self.__dict__
+        pd.to_pickle(d, filepath)
 
     @abc.abstractmethod
-    def load(self):
-        pass
+    def load(self, filepath):
+        d = pd.read_pickle(filepath)
+        for atr, val in d.items():
+            self.__setattr__(atr, val)
 
 
 class RatingPredictor(BaseRecommender):
@@ -137,8 +141,7 @@ class SavedRecommendations(RatingPredictor):
         for user in range(RS.database.n_users()):
             lists.append(RS.recommend(user))
         with open(filepath, 'wb') as f:
-            config = RS.__dict__
-            del config['database']
+            config = None
             pkl.dump((lists, config), f)
 
     def load(self, filepath):

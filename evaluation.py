@@ -50,7 +50,7 @@ def train_save(RS, split, out_filepath):
 def test_save(RS, out_filepath):
     RS.load(out_filepath+TRAIN_SUFFIX)
     rec = SavedRecommendations()
-    rec.save(RS, out_filepath+TEST_SUFFIX)
+    rec.save(out_filepath+TEST_SUFFIX, RS)
 
 
 class Metrics(object):

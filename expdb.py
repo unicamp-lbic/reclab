@@ -34,7 +34,7 @@ class ExperimentDB(object):
         self.dbfile = None
 
     def load_db(self, dbfile):
-        self.db = pd.read_csv(dbfile)
+        self.db = pd.read_pickle(dbfile)
         self.dbfile = dbfile
 
     def new_db(self, dbfile):
@@ -43,8 +43,8 @@ class ExperimentDB(object):
         self.save_db()
 
     def save_db(self):
-        print(self.db)
-        self.db.to_csv(self.dbfile)
+        self.db.to_pickle(self.dbfile)
+        self.db.to_csv(self.dbfile+'.csv')
 
     def _get_entries(self, conf):
         df = pd_select(self.db, conf.as_dict())
@@ -70,7 +70,7 @@ class ExperimentDB(object):
     def get_fold_arg_val(self, exp_id, fold, arg_name, conf):
         try:
             val = self.db.get_value((exp_id, fold), arg_name)
-            if np.isnan(val):
+            if pd.isnull(val):
                 '''
                 did not find value for this experiment
                 try to locate compatible experiment for specific args
@@ -112,8 +112,8 @@ class ExperimentDB(object):
         self.save_db()
 
     def add_experiment(self, exp_id, conf):
-        data = [conf.as_dict()]
-        index = [(exp_id, 0)]
+        data = [conf.as_dict()]*conf.nfolds
+        index = [(exp_id, i) for i in range(conf.nfolds)]
         index = pd.MultiIndex.from_tuples(index, names=['exp_id', 'fold'])
         df = pd.DataFrame(data, index=index)
         self.db = self.db.append(df)

@@ -10,6 +10,7 @@ import abc
 import neighbors
 from BMF import BMF
 import numpy as np
+import pandas as pd
 from utils import oneD
 from sklearn.random_projection import GaussianRandomProjection,\
                                       SparseRandomProjection
@@ -63,6 +64,20 @@ class PredictionStrategy(object):
             else:
                 pred_rating = 0
         return pred_rating
+
+
+class DummyRecommender(RatingPredictor):
+    def __init__(self):
+        self.user_means = []
+        self.database = None
+
+    def fit(self, database):
+        self.database = database
+        matrix, user_means = self.database.get_matrix(zero_mean=True)
+        self.user_means = user_means
+
+    def predict(self, target_user, target_item):
+        return self.user_means[target_user]
 
 
 class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
