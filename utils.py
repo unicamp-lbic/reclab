@@ -65,11 +65,16 @@ def read_results(path='', meanstd=True):
         result.append(read_result(fname, path, meanstd=meanstd))
     return result
 
+
 def pd_select(dataframe, select):
-    data = dataframe
-    for key, value in select.items():
-        data = data[data[key] == value]
-    return data
+    try:
+        data = dataframe
+        for key, value in select.items():
+            data = data[data[key] == value]
+        return data
+    except KeyError:
+        return None
+
 
 def plot_metric(metric, varpar, across, dataframe, select,
                 labelfmt='%s', labelmul=1):

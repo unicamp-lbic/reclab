@@ -59,6 +59,12 @@ class MatrixDatabase(BaseDatabase):
         else:
             return BaseDatabase.get_user_vector(self, user_id)
 
+    def get_rating_list(self, user_id):
+        vector = BaseDatabase.get_user_vector(self, user_id)
+        alist = [(r, i) for i, r in enumerate(vector) if r != 0]
+        alist.sort()
+        return [(i, r) for r, i in alist]
+
     def get_item_vector(self, item_id, zero_mean=False):
         if zero_mean:
             if self.zero_mean_matrix is None:

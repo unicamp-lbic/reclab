@@ -54,13 +54,13 @@ class Splitter(object):
         fname_prefix = filepath + self.suffix
         if self.nfolds == 1:
             split = Split(self.train, self.test, self.config)
-            with open(fname_prefix '_split.pkl', 'wb') as f:
+            with open(fname_prefix + '_split.pkl', 'wb') as f:
                 pkl.dump(split, f)
         else:
             for i in range(self.nfolds):
-                config = self.config
+                config = self.config.copy()
                 config['fold'] = i
-                split = Split(self.train, self.test, config)
+                split = Split(self.train[i], self.test[i], config)
                 fname = fname_prefix + '_split_%d.pkl' % i
                 with open(fname, 'wb') as f:
                     pkl.dump(split, f)

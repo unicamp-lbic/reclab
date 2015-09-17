@@ -136,12 +136,18 @@ class MFrecomender(RatingPredictor):
         self.Q = Q
 
 class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
+    __MF_type__ = BMF
+
+    def __MF_args__(RS_args):
+        args = ['min_coverage', 'bin_threshold']
+        return dict([(arg, RS_args[arg]) for arg in args ])
+
     def __init__(self, neighbor_type='user', offline_kNN=False,
                  n_neighbors=10, algorithm='brute', metric='cosine',
-                 threshold=0, min_coverage=1.0):
+                 bin_threshold=0, min_coverage=1.0):
         self.database = None
         self.neighbor_type = neighbor_type
-        self.threshold = threshold
+        self.bin_threshold = bin_threshold
         self.min_coverage = min_coverage
         self.P = None
         self.Q = None
@@ -158,7 +164,7 @@ class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
         self.kNN_graph = None
 
     def transform(self, user_vector):
-        items = set(np.where(oneD(user_vector) > self.threshold)[0])
+        items = set(np.where(oneD(user_vector) > self.bin_threshold)[0])
         orig_len = len(items)
         factors = [(set(np.where(line == 1)[0]), i)
                    for i, line in enumerate(self.Q.T)]
@@ -188,7 +194,7 @@ class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
         mf = BMF(self.min_coverage)
         if P is None or Q is None:
             self.P, self.Q = \
-                mf.fit(self.database.get_matrix(threshold=self.threshold))
+                mf.fit(self.database.get_matrix(threshold=self.bin_threshold))
         else:
             self.set_bmf(P, Q)
 
@@ -277,7 +283,7 @@ class BMFRPrecommender(BMFrecommender):
         mf = BMF()
         if P is None or Q is None:
             self.P, self.Q = \
-                mf.fit(self.database.get_matrix(threshold=self.threshold))
+                mf.fit(self.database.get_matrix(threshold=self.bin_threshold))
         else:
             self.set_bmf(P, Q)
 
