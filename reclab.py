@@ -14,7 +14,7 @@ import data
 import datasplit as ds
 import expdb
 import databases
-
+from subprocess import call
 
 '''
 Parse command line params
@@ -26,6 +26,9 @@ parser.add_argument('action')
 # TODO add positional argument to inform what to do: train, recomend, evaluate
 args = parser.parse_args()
 
+if args.action == 'clear_db':
+    call(["trash", expdb.DBFILE])
+    exit()
 
 '''
 Try to load configuration settings
@@ -111,7 +114,7 @@ for fold in range(conf.nfolds):
     elif args.action == 'metrics':
         metrics = evalu.Metrics(split, FOLD_PATH)
         metrics.error_metrics()
-        metrics.list_metrics()
+        metrics.list_metrics(conf.atN, conf.threshold)
 
     else:
         raise ValueError('Invalid action')
