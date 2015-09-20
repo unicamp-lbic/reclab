@@ -61,42 +61,47 @@ class Metrics(object):
         self.test_set = self.split.test
         self.metrics = dict()
 
-    def _hits_single_user(self, user_id, atN):
+    def _rlist_single_user(self, user_id):
         hidden_items = [i_id for i_id, rating in self.test_set[user_id]]
         candidate_items = list(self.split.train.get_unrated_items(user_id)) + \
                           hidden_items
 
-        rlist = self.RS.recommend(user_id, how_many=atN,
+        rlist = self.RS.recommend(user_id,
                                   threshold=self.threshold,
                                   candidate_items=candidate_items)
-        rlist = dict(rlist)
+        return rlist
+
+    def _hits_atN(self, user_id, rlist, atN, threshold):
+        good_hidden = [i_id for i_id, rating in self.test_set[user_id]
+                       if rating > threshold]
+        rlist = dict(rlist[0:atN])
         hit = 0
-        for item_id in hidden_items:
+        for item_id in good_hidden:
             hit += 1 if item_id in rlist else 0
         return hit
 
-    def list_metrics(self, atN, threshold):
+    def list_metrics(self, threshold):
         recall = 0
         precision = 0
         F1 = 0
         n_users = len(self.test_set)
         for user_id in self.test_set:
-            hits = self._hits_single_user(user_id, atN)
-            r = hits/len(self.test_set[user_id])
-            p = hits/atN
-            if r+p > 0:
-                f1 = 2*r*p/(r+p)
-            else:
-                f1 = 0
-            recall += r/len(n_users)
-            precision += p/len(n_users)
-            F1 += f1/len(n_users)
+            rlist = self._rlist_single_user(user_id)
+            for atN in [1, 5, 10, 15, 20]:
+                hits = self._hits_atN(user_id, rlist, atN, threshold)
+                r = hits/len(self.test_set[user_id])
+                p = hits/atN
+                if r+p > 0:
+                    f1 = 2*r*p/(r+p)
+                else:
+                    f1 = 0
+                recall += r/len(n_users)
+                precision += p/len(n_users)
+                F1 += f1/len(n_users)
 
-        self.metrics['P@%d' % atN] = precision
-        self.metrics['R@%d' % atN] = recall
-        self.metrics['F1@%d' % atN] = F1
-        return (precision, recall, F1)
-
+            self.metrics['P@%d' % atN] = precision
+            self.metrics['R@%d' % atN] = recall
+            self.metrics['F1@%d' % atN] = F1
 
     def _absErr_single_rating(self, user_id, item_id, true_rating):
         pred_rating = self.RS.predict(user_id, item_id)
@@ -106,12 +111,22 @@ class Metrics(object):
     def error_metrics(self):
         MAE = 0
         MSE = 0
+        MAEu = 0
+        MSEu = 0
+        nUsers = len(self.test_set)
+        nTestRatings = sum([len(r) for r in self.test_set.values()])
         for user, test in self.test_set.items():
             for item, rating in test:
                 absErr = self._absErr_single_rating(user, item, rating)
-                MAE += absErr/len(self.test_set)
-                MSE += absErr**2/len(self.test_set)
+                MAE += absErr/nTestRatings
+                MSE += absErr**2/nTestRatings
+                MAEu += absErr/len(test)
+                MSEu += absErr**2/len(test)
+            MAEu /= nUsers
+            MSEu /= nUsers
         RMSE = np.sqrt(MSE)
+        RMSEu = np.sqrt(MSEu)
         self.metrics['RMSE'] = RMSE
         self.metrics['MAE'] = MAE
-        return (MAE, RMSE)
+        self.metrics['RMSEu'] = RMSEu
+        self.metrics['MAEu'] = MAEu

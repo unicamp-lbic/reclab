@@ -137,9 +137,9 @@ class SavedRecommendations(RatingPredictor):
         self.database = None
 
     def save(self, filepath, RS):
-        lists = []
+        lists = {}
         for user in range(RS.database.n_users()):
-            lists.append(RS.recommend(user))
+            lists[user] = RS.recommend(user)
         with open(filepath, 'wb') as f:
             config = None
             pkl.dump((lists, config), f)
@@ -155,7 +155,7 @@ class SavedRecommendations(RatingPredictor):
                 rows.append(user)
                 cols.append(item)
                 data.append(rating)
-        self.pred_ratings = sparse.coo_matrix((data, (rows, cols)))
+        self.pred_ratings = sparse.coo_matrix((data, (rows, cols))).todok()
 
     def predict(self, target_user, target_item):
         return self.pred_ratings[target_user, target_item]

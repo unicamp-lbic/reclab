@@ -20,14 +20,29 @@ from subprocess import call
 Parse command line params
 '''
 parser = argparse.ArgumentParser(description='Run recommender training/evaluation')
-parser.add_argument('config', help='Configuration setting for this run \
+parser.add_argument('action', help='train, test, metrics or clear_db')
+parser.add_argument('-c', '--config', help='Configuration setting for this run \
 (see valid_configs in config.py)')
-parser.add_argument('action')
-# TODO add positional argument to inform what to do: train, recomend, evaluate
+parser.add_argument('--id', help='experiment id to work on')
+
 args = parser.parse_args()
 
 if args.action == 'clear_db':
     call(["trash", expdb.DBFILE])
+    exit()
+
+
+'''
+Load experiments DB
+'''
+exp_db = expdb.load_experiments_db()
+
+'''
+Process clear exp command
+'''
+if args.action == 'clear_exp':
+    exp_id = args.id
+    exp_db.clear_experiment(exp_id)
     exit()
 
 '''
@@ -40,10 +55,7 @@ except KeyError:
 
 
 
-'''
-Load experiments DB
-'''
-exp_db = expdb.load_experiments_db()
+
 
 
 '''
@@ -114,7 +126,7 @@ for fold in range(conf.nfolds):
     elif args.action == 'metrics':
         metrics = evalu.Metrics(split, FOLD_PATH)
         metrics.error_metrics()
-        metrics.list_metrics(conf.atN, conf.threshold)
+        metrics.list_metrics(int(args.atN), conf.threshold)
 
     else:
         raise ValueError('Invalid action')

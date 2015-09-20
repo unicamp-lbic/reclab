@@ -44,7 +44,7 @@ class ExperimentDB(object):
 
     def save_db(self):
         self.db.to_pickle(self.dbfile)
-        self.db.to_csv(self.dbfile+'.csv')
+        self.db.to_csv(self.dbfile+'.csv', na_rep=' ')
 
     def _get_entries(self, conf):
         df = pd_select(self.db, conf.as_dict())
@@ -118,4 +118,7 @@ class ExperimentDB(object):
         df = pd.DataFrame(data, index=index)
         self.db = self.db.append(df)
         self.save_db()
+
+    def clear_experiment(self, exp_id):
+        pass
 
