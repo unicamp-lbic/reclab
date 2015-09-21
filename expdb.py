@@ -5,9 +5,10 @@ Created on Wed Sep 16 14:57:59 2015
 @author: thalita
 """
 import os
-import numpy as np
 import pandas as pd
 from utils import pd_select
+from subprocess import call
+
 
 DBFILE = 'experiments.db'
 ARGS = {'MF':'MF_file_prefix',
@@ -64,13 +65,13 @@ class ExperimentDB(object):
             '''
             return df.index.get_level_values('exp_id')[0]
 
-    def get_arg_val(self, exp_id, arg_name, conf):
+    def get_arg_val(self, exp_id, arg_name, conf=None):
         return self.get_fold_arg_val(exp_id, 0, arg_name, conf)
 
-    def get_fold_arg_val(self, exp_id, fold, arg_name, conf):
+    def get_fold_arg_val(self, exp_id, fold, arg_name, conf=None):
         try:
             val = self.db.get_value((exp_id, fold), arg_name)
-            if pd.isnull(val):
+            if pd.isnull(val) and conf is not None:
                 '''
                 did not find value for this experiment
                 try to locate compatible experiment for specific args
@@ -94,11 +95,15 @@ class ExperimentDB(object):
                     elif df.shape[0] == 0:  # did not find compatible experiment
                         val = None
                     else:
-                        other_id = df.index.get_level_values('exp_id')[0]
-                        val = self.db.get_value((other_id, fold), arg_name)
+                        exp_id = df.index.get_level_values('exp_id')[0]
+                        val = self.db.get_value((exp_id, fold), arg_name)
                 else:
                     val = None
-
+            # check if path exists
+            if val is not None:
+                if not os.path.exists(os.path.split(val)[0]):
+                    val = None
+                    self.db.set_value((exp_id, fold), arg_name, '')
             return val
         except KeyError:
             return None
@@ -120,5 +125,20 @@ class ExperimentDB(object):
         self.save_db()
 
     def clear_experiment(self, exp_id):
-        pass
+        call(["trash", './results/'+ exp_id + '/'])
+        self.db.drop(exp_id, inplace=True)
+        self.save_db()
+
+    def clear_conf(self, conf):
+        self.clear_experiment(self.get_id(conf))
+        self.save_db()
+
+    def __str__(self):
+        return self.db.__str__()
+
+    def print(self):
+        with pd.option_context('display.max_rows', self.db.shape[0],
+                               'display.max_columns', self.db.shape[1]):
+            print(self.db)
+
 

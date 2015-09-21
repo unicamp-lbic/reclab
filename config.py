@@ -44,7 +44,8 @@ class Config(object):
 dummy5fold = Config(
     database='ml100k',
     RS_type=rec.DummyRecommender,
-    nfolds=5
+    nfolds=5,
+    threshold=3
 )
 
 IB5fold = Config(
@@ -54,7 +55,9 @@ IB5fold = Config(
               'algorithm': 'brute',
               'metric': 'cosine'},
     nfolds=5,
-    is_MF=False
+    is_MF=False,
+    threshold=3
+
 )
 
 BMF5fold = Config(
@@ -68,7 +71,9 @@ BMF5fold = Config(
               'min_coverage': 1.0,
               'bin_threshold': 3},
     nfolds=5,
-    is_MF=True
+    is_MF=True,
+    threshold=3
+
 )
 
 
