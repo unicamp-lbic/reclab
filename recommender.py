@@ -10,7 +10,6 @@ import abc
 import neighbors
 from BMF import BMF
 import numpy as np
-import pandas as pd
 from utils import oneD
 from sklearn.random_projection import GaussianRandomProjection,\
                                       SparseRandomProjection
@@ -22,36 +21,40 @@ class NeighborStrategy(object):
     def _item_strategy(self, target_user, distances, indices,
                        zero_mean):
         indices = oneD(indices)
+        distances = oneD(distances)
         if np.isscalar(target_user):
             ratings = np.array([self.database.get_rating(target_user, item)
                                 for item in indices])
         else:
             ratings = np.array([target_user[item]
                                 for item in indices])
-        similarities = oneD((1.0 - distances))
-        if self.offline_kNN:
-            ratings = ratings[np.where(ratings > 0)][:self.n_neighbors]
-            similarities = \
-                similarities[np.where(ratings > 0)][:self.n_neighbors]
+
+        if self.metric == 'cosine':
+            similarities = oneD((1.0 - distances))
+        elif self.metric == 'pearson' or self.metric == 'correlation':
+            similarities = distances
+
         return (ratings, similarities)
 
     def _user_strategy(self, target_item, distances, indices,
                        zero_mean):
         indices = oneD(indices)
+        distances = oneD(distances)
         ratings = np.array([self.database.get_rating(user, target_item)
                             for user in indices], ndmin=1)
-        similarities = oneD((1.0 - distances))
-        if self.offline_kNN:
-            ratings = ratings[np.where(ratings > 0)][:self.n_neighbors]
-            similarities = \
-                similarities[np.where(ratings > 0)][:self.n_neighbors]
+
+        if self.metric == 'cosine':
+            similarities = oneD((1.0 - distances))
+        elif self.metric == 'pearson' or self.metric == 'correlation':
+            similarities = distances
+
         return (ratings, similarities)
 
 
 class PredictionStrategy(object):
     __metaclass__ = abc.ABCMeta
 
-    def _predict(self, ratings, similarities):
+    def _predict(self, ratings, similarities, zero_mean=False):
         if (ratings == 0).all():
             #print('All user ratings on neighbor items are zero')
             pred_rating = 0
@@ -82,26 +85,39 @@ class DummyRecommender(RatingPredictor):
 
 class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
     def __init__(self, n_neighbors=10, algorithm='brute',
-                 metric='cosine'):
+                 metric='cosine', offline_kNN=True):
         self.database = None
         self.n_neighbors = n_neighbors
         self.model_size = 30 * n_neighbors
-        self.offline_kNN = True
+        self.metric = 'cosine'
+        self.offline_kNN = offline_kNN
         self.kNN = neighbors.kNN(n_neighbors=self.model_size,
                                  algorithm=algorithm, metric=metric)
 
     def fit(self, database):
         self.database = database
-        matrix, user_means = self.database.get_matrix(zero_mean=True)
-        self.kNN.fit(matrix.T)
+        if self.offline_kNN:
+            matrix, user_means = self.database.get_matrix(zero_mean=True)
+            self.kNN.fit(matrix.T, keepgraph=True)
         return self
 
     def predict(self, target_user, target_item):
-        item_vector = self.database.get_item_vector(target_item,
-                                                    zero_mean=True)
-        distances, indices = \
-            self.kNN.kneighbors(item_vector, min(self.n_neighbors,
-                                                 self.database.n_items()))
+        n_neighbors = min(self.n_neighbors, self.database.n_items())
+        rated_items = self.database.get_rated_items(target_user)
+        if len(oneD(rated_items)) == 0:
+            return 0
+        if self.offline_kNN:
+            distances, indices = \
+                self.kNN.kneighbors(target_item, n_neighbors=n_neighbors,
+                                    filter=rated_items)
+        else:
+            matrix, user_means = self.database.get_matrix(zero_mean=True)
+            item_vector = self.database.get_item_vector(target_item, zero_mean=True)
+            self.kNN.fit(matrix[:, rated_items].T)
+            distances, indices = \
+                self.kNN.kneighbors(item_vector, n_neighbors=n_neighbors)
+            indices = oneD([rated_items[i] for i in oneD(indices)])
+
         if len(oneD(indices)) == 0:
             return 0
 
@@ -112,50 +128,59 @@ class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
         return self._predict(ratings, similarities)
 
 
-class UserBased(RatingPredictor, PredictionStrategy):
+class UserBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
     def __init__(self, n_neighbors=20, algorithm='brute',
-                 metric='pearson'):
+                 metric='pearson', offline_kNN=True):
         self.database = None
+        self.n_neighbors = n_neighbors
+        self.offline_kNN = offline_kNN
         self.kNN = neighbors.kNN(n_neighbors=n_neighbors,
                                  algorithm=algorithm, metric=metric)
 
     def fit(self, database):
         self.database = database
+        matrix, user_means = database.get_matrix(zero_mean=True)
+        self.kNN.estimator.n_neighbors = matrix.shape[1]
+        self.kNN.fit(matrix, keepgraph=True)
         return self
 
     def predict(self, target_user, target_item):
-        raise NotImplementedError('UserBased recommender not implemented')
-        data, orig_indices = self.database.get_rated_users(target_item)
-        self.kNN.fit(data)
+        orig_indices = set(self.database.get_rated_users(target_item))
+        if len(oneD(orig_indices)) == 0:
+            return 0
 
-        user_vector = self.database.get_user_vector(target_user)
-        distances, indices = self.kNN.kneighbors(user_vector)
-        indices = indices.squeeze()
+        distances, indices = \
+            self.kNN.kneighbors(target_user, n_neighbors=self.n_neighbors,
+                                filter=orig_indices)
 
-        similarities = 1.0/distances
-        indices = [orig_indices[i] for i in indices]
+        if len(oneD(indices)) == 0:
+            return 0
 
-        rating = 0
-        for i, user in enumerate(indices):
-            rating += \
-                self.database.get_rating(user, target_item)*similarities[i]
-        rating /= similarities.sum()
+        ratings, similarities = \
+            self._user_strategy(target_item, distances, indices,
+                                zero_mean=False)
 
-        return rating
+        return self._predict(ratings, similarities)
+
 
 class MFrecomender(RatingPredictor):
     __metaclass__ = abc.ABCMeta
 
+    @abc.abstractclassmethod
+    def __MF_args__(RS_args):
+        pass
+
     def load_mf(self, P, Q):
         self.P = P
         self.Q = Q
+
 
 class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
     __MF_type__ = BMF
 
     def __MF_args__(RS_args):
         args = ['min_coverage', 'bin_threshold']
-        return dict([(arg, RS_args[arg]) for arg in args ])
+        return dict([(arg, RS_args[arg]) for arg in args])
 
     def __init__(self, neighbor_type='user', offline_kNN=False,
                  n_neighbors=10, algorithm='brute', metric='cosine',
@@ -204,20 +229,18 @@ class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
 
         return np.array(user_vector)
 
-    def fit(self, database, P=None, Q=None):
+    def fit(self, database):
         self.database = database
         mf = BMF(self.min_coverage)
-        if P is None or Q is None:
+        if self.P is None or  self.Q is None:
             self.P, self.Q = \
                 mf.fit(self.database.get_matrix(threshold=self.bin_threshold))
-        else:
-            self.set_bmf(P, Q)
 
         if self.offline_kNN:
             if self.neighbor_type == 'user':
-                self.kNN.fit(self.P)
+                self.kNN.fit(self.P, keepgraph=True)
             elif self.neighbor_type == 'item':
-                self.kNN.fit(self.Q)
+                self.kNN.fit(self.Q, keepgraph=True)
             else:
                 raise ValueError('Invalid neighbor_type "%s" parameter passed \
                                  to constructor' % self.neighbor_type)
@@ -230,23 +253,23 @@ class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
             else:
                 user_vector = self.transform(target_user)
 
-            if not self.offline_kNN:
-                user_ids = self.database.get_rated_users(target_item)
-                if len(user_ids) == 0:
-                    #print('No co-rating neighbor for user %d, item %d' %
-                    #      (target_user, target_item))
-                    return 0
-                self.kNN.fit(self.P[user_ids, :])
-                distances, indices = \
-                    self.kNN.kneighbors(user_vector,
-                                        min(self.n_neighbors, len(user_ids)))
-                indices = np.array([user_ids[i] for i in oneD(indices)])
+            user_ids = self.database.get_rated_users(target_item)
+            if len(user_ids) == 0:
+                #print('No co-rating neighbor for user %d, item %d' %
+                #      (target_user, target_item))
+                return 0
 
-            else:
+            if self.offline_kNN:
+                n_neighbors = min(self.n_neighbors, self.database.n_users())
                 distances, indices = \
-                    self.kNN.kneighbors(user_vector,
-                                        min(self.n_neighbors,
-                                            self.database.n_users()))
+                    self.kNN.kneighbors(target_user, n_neighbors,
+                                        filter=user_ids)
+            else:
+                self.kNN.fit(self.P[user_ids, :])
+                n_neighbors = min(self.n_neighbors, len(user_ids))
+                distances, indices = \
+                    self.kNN.kneighbors(user_vector, n_neighbors)
+                indices = np.array([user_ids[i] for i in oneD(indices)])
 
             ratings, similarities = \
                 self._user_strategy(target_item, distances, indices,
@@ -254,31 +277,29 @@ class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
 
         elif self.neighbor_type == 'item':
             item_vector = self.Q[target_item, :]
+            item_ids = self.database.get_rated_items(target_user)
+            if len(item_ids) == 0:
+                #print('No co-rating neighbor for user %d, item %d' %
+                #      (target_user, target_item))
+                return 0
 
-            if not self.offline_kNN:
-                item_ids = self.database.get_rated_items(target_user)
-                if len(item_ids) == 0:
-                    #print('No co-rating neighbor for user %d, item %d' %
-                    #      (target_user, target_item))
-                    return 0
-                self.kNN.fit(self.Q[item_ids, :])
-
+            if self.offline_kNN:
+                n_neighbors = min(self.n_neighbors, self.database.n_items())
                 distances, indices = \
-                    self.kNN.kneighbors(item_vector,
-                                        min(self.n_neighbors, len(item_ids)))
+                    self.kNN.kneighbors(item_vector, n_neighbors,
+                                        filter=item_ids)
             else:
+                self.kNN.fit(self.Q[item_ids, :])
+                n_neighbors = min(self.n_neighbors, len(item_ids))
                 distances, indices = \
-                    self.kNN.kneighbors(item_vector,
-                                        min(self.n_neighbors,
-                                            self.database.n_items()))
+                    self.kNN.kneighbors(item_vector, n_neighbors)
+                indices = np.array([item_ids[i] for i in oneD(indices)])
 
             ratings, similarities = \
                 self._item_strategy(target_user,
                                     distances, indices, zero_mean=False)
 
         return self._predict(ratings, similarities)
-
-
 
 
 class BMFRPrecommender(BMFrecommender):
@@ -292,15 +313,11 @@ class BMFRPrecommender(BMFrecommender):
         new_vec = BMFrecommender.transform(self, user_vector)
         return self.RP.transform(new_vec)
 
-    def fit(self, database, P=None, Q=None):
-        self.database = database
-
-        mf = BMF()
-        if P is None or Q is None:
+    def fit(self, database):
+        if self.P is None or self.Q is None:
             self.P, self.Q = \
+            mf = BMF(self.min_coverage)
                 mf.fit(self.database.get_matrix(threshold=self.bin_threshold))
-        else:
-            self.set_bmf(P, Q)
 
         if self.dim_red != 'auto':
             n_components = int(np.ceil(self.dim_red*self.P.shape[1]))
@@ -311,7 +328,6 @@ class BMFRPrecommender(BMFrecommender):
             self.RP = GaussianRandomProjection(n_components=n_components)
         elif self.RP == 'sparse':
             self.RP = SparseRandomProjection(n_components=n_components)
-
 
         if self.neighbor_type == 'user':
             self.P = self.RP.fit_transform(self.P)

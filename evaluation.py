@@ -47,8 +47,8 @@ def train_save(RS, split, out_filepath):
     RS.save(out_filepath+TRAIN_SUFFIX)
 
 
-def test_save(RS, out_filepath):
-    RS.load(out_filepath+TRAIN_SUFFIX)
+def test_save(RS, out_filepath, split):
+    RS.load(out_filepath+TRAIN_SUFFIX, split.train)
     rec = SavedRecommendations()
     rec.save(out_filepath+TEST_SUFFIX, RS)
 

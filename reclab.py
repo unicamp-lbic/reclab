@@ -161,7 +161,7 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
 
     elif args.action == 'test':
         t0 = time.time()
-        evalu.test_save(RS, FOLD_PATH)
+        evalu.test_save(RS, FOLD_PATH, split)
         tst_dt = time.time() - t0
         exp_db.set_fold_arg_val(EXP_ID, fold, 'test_file_prefix', FOLD_PATH)
         exp_db.set_fold_arg_val(EXP_ID, fold, 'test_time', tst_dt)

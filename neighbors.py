@@ -24,7 +24,7 @@ class kNN(object):
                 raise ValueError('LSH forest can only use cosine metric')
             self.estimator = \
                 LSHForest(n_estimators=10, radius=1.0,
-                          n_candidates=10*n_neighbors, n_neighbors=n_neighbors,
+                          n_candidates=2*n_neighbors, n_neighbors=n_neighbors,
                           min_hash_match=4, radius_cutoff_ratio=0.9,
                           random_state=None)
 
@@ -42,12 +42,23 @@ class kNN(object):
                 self.graph[i] = [(ind, dist) for dist, ind in NN]
         return self.estimator
 
-    def kneighbors(self, X, n_neighbors=None, return_distance=True):
+    def kneighbors(self, X, n_neighbors=None, return_distance=True,
+                   filter=None):
         if np.isscalar(X) and self.graph is not None:
             if n_neighbors is None:
-                select = self.graph[X][:self.estimator.n_neighbors]
+                n_neighbors = self.estimator.n_neighbors
+            if filter is not None:
+                filter = set(filter)
+                select = []
+                for ind, dist in self.graph[X]:
+                    if ind in filter:
+                        select.append((ind, dist))
+                    if len(select) > n_neighbors:
+                        break
             else:
-                select = self.graph[X][:n_neighbors]
+                select = self.graph[X]
+
+            select = select[:n_neighbors]
             indices = [i for i, d in select]
             if return_distance:
                 distances = [d for i, d in select]

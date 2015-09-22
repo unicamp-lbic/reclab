@@ -53,7 +53,21 @@ IB5fold = Config(
     RS_type=rec.ItemBased,
     RS_args={'n_neighbors': 20,
               'algorithm': 'brute',
-              'metric': 'cosine'},
+              'metric': 'cosine',
+              'offline_kNN': True},
+    nfolds=5,
+    is_MF=False,
+    threshold=3
+
+)
+
+UB5fold = Config(
+    database='ml100k',
+    RS_type=rec.UserBased,
+    RS_args={'n_neighbors': 20,
+              'algorithm': 'brute',
+              'metric': 'pearson',
+              'offline_kNN': True},
     nfolds=5,
     is_MF=False,
     threshold=3
@@ -69,7 +83,8 @@ BMF5fold = Config(
               'algorithm': 'brute',
               'metric': 'cosine',
               'min_coverage': 1.0,
-              'bin_threshold': 3},
+              'bin_threshold': 3,
+              'offline_kNN': True},
     nfolds=5,
     is_MF=True,
     threshold=3
@@ -84,5 +99,6 @@ Dictionary of valid configuration settings
 valid_configs = {
     'BMF5fold': BMF5fold,
     'IB5fold': IB5fold,
-    'dummy5fold': dummy5fold
+    'dummy5fold': dummy5fold,
+    'UB5fold': UB5fold
 }

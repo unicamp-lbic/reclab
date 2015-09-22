@@ -97,10 +97,14 @@ class ExperimentDB(object):
                     else:
                         exp_id = df.index.get_level_values('exp_id')[0]
                         val = self.db.get_value((exp_id, fold), arg_name)
+                        if pd.isnull(val):
+                            val = None
                 else:
                     val = None
             # check if path exists
-            if val is not None:
+            # if it does not, refered experiment was deleted
+            # clear entry
+            if val is not None and not pd.isnull(val):
                 if not os.path.exists(os.path.split(val)[0]):
                     val = None
                     self.db.set_value((exp_id, fold), arg_name, '')
@@ -131,7 +135,6 @@ class ExperimentDB(object):
 
     def clear_conf(self, conf):
         self.clear_experiment(self.get_id(conf))
-        self.save_db()
 
     def __str__(self):
         return self.db.__str__()

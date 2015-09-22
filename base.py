@@ -85,14 +85,15 @@ class BaseRecommender(object):
     @abc.abstractmethod
     def save(self, filepath):
         d = self.__dict__
+        del d['_database']
         pd.to_pickle(d, filepath)
 
     @abc.abstractmethod
-    def load(self, filepath):
+    def load(self, filepath, database):
         d = pd.read_pickle(filepath)
         for atr, val in d.items():
             self.__setattr__(atr, val)
-
+        self.database = database
 
 class RatingPredictor(BaseRecommender):
     __metaclass__ = abc.ABCMeta
