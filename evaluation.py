@@ -27,10 +27,8 @@ def load_split(split_fname_prefix, fold=None):
     return split
 
 
-def gen_mf(split, filepath, MFclass, **MFparams):
-    mf = MFclass(**MFparams)
-    matrices = mf.fit(split.train.get_matrix())
-
+def gen_mf(split, filepath, RS):
+    matrices = RS.gen_mf(split.train)
     fname = filepath + MF_SUFFIX
     with open(fname, 'wb') as f:
         pkl.dump(matrices, f)
@@ -39,7 +37,7 @@ def gen_mf(split, filepath, MFclass, **MFparams):
 def load_mf(filepath, RS):
     with open(filepath + MF_SUFFIX, 'rb') as f:
         matrices = pkl.load(f)
-    RS.load_mf(matrices)
+    RS.load_mf(*matrices)
     return RS
 
 def train_save(RS, split, out_filepath):

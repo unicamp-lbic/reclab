@@ -49,7 +49,7 @@ dummy5fold = Config(
 )
 
 IB5fold = Config(
-    database='ml100k',
+    database='testDB',
     RS_type=rec.ItemBased,
     RS_args={'n_neighbors': 20,
               'algorithm': 'brute',
@@ -62,11 +62,11 @@ IB5fold = Config(
 )
 
 UB5fold = Config(
-    database='ml100k',
+    database='testDB',
     RS_type=rec.UserBased,
     RS_args={'n_neighbors': 20,
               'algorithm': 'brute',
-              'metric': 'pearson',
+              'metric': 'correlation',
               'offline_kNN': True},
     nfolds=5,
     is_MF=False,
@@ -75,10 +75,10 @@ UB5fold = Config(
 )
 
 BMF5fold = Config(
-    database='ml100k',
+    database='testDB',
     RS_type=rec.BMFrecommender,
     RS_args={'n_neighbors': 20,
-              'neighborhood_type': 'user',
+              'neighbor_type': 'user',
               'offline_kNN': False,
               'algorithm': 'brute',
               'metric': 'cosine',

@@ -6,7 +6,6 @@ Created on Mon Apr 27 12:18:12 2015
 """
 from base import BaseDatabase
 import numpy as np
-from numpy.random import random_integers
 import scipy.sparse as sparse
 from utils import _get_zero_mean_matrix
 
@@ -87,26 +86,6 @@ class MatrixDatabase(BaseDatabase):
         "return users who did not rate item_id user"
         return [idx for idx, rating in enumerate(self.matrix[:, item_id])
                 if rating > 0]
-
-
-class TestDB(MatrixDatabase):
-    def __init__(self, nusers, nitems, min_items=0.02, binary=False):
-        min_items = np.ceil(min_items*nitems)
-        matrix = np.zeros((nusers, nitems))
-
-        for i in range(nusers):
-            extra = random_integers(0, min_items)
-            total_items = max(min_items, min_items + extra)
-            idx = random_integers(0, nitems-1, total_items)
-            matrix[i, idx] = 1.0
-
-        if not binary:
-            matrix = np.multiply(matrix,
-                 random_integers(1, 5, size=(nusers, nitems)))
-            for i in range(0, nusers, 2):
-                matrix[i+1, :] = np.ceil((matrix[i, :] + matrix[i+1, :]) / 2.0)
-
-        MatrixDatabase.__init__(self, matrix)
 
 
 class HiddenRatingsDatabase(MatrixDatabase):

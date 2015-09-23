@@ -29,7 +29,7 @@ def main():
     (see valid_configs in config.py)')
     parser.add_argument('--id', help='experiment id to erase (user with clear exp)')
     parser.add_argument('-s','--sweep', help='do param sweep')
-    parser.add_argument('-V','--values', help='values for param sweep')
+    parser.add_argument('-v','--values', help='values for param sweep')
     args = parser.parse_args()
 
     '''
@@ -83,10 +83,23 @@ def main():
 
 
 def run_sweep(args, conf, exp_db):
-    for v in args.values:
-        new_conf = conf.copy()
-        new_conf.__setattr__(args.sweep, v)
-        run_exp(args, new_conf, exp_db)
+    values = args.values.split(',')
+    try:
+        values = [int(x) for x in values]
+    except ValueError:
+        try:
+            values = [float(x) for x in values]
+        except ValueError:
+            pass
+
+    for v in values:
+        if args.sweep in conf.__dict__:
+            conf.__setattr__(args.sweep, v)
+        elif args.sweep in conf.RS_args:
+            conf.RS_args[args.sweep] = v
+        else:
+            raise ValueError('Parameter not present in specified cofiguration')
+        run_exp(args, conf, exp_db)
 
 
 def run_exp(args, conf, exp_db):
@@ -147,10 +160,10 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
             if MF_file_prefix is None:
                 MF_file_prefix = FOLD_PATH
                 t0 = time.time()
-                evalu.gen_mf(split, MF_file_prefix, conf.MF_type, conf.MF_args)
+                evalu.gen_mf(split, MF_file_prefix, RS)
                 mf_dt = time.time() - t0
+                exp_db.set_fold_arg_val(EXP_ID, fold, 'MF_time', mf_dt)
             exp_db.set_fold_arg_val(EXP_ID, fold, 'MF_file_prefix', MF_file_prefix)
-            exp_db.set_fold_arg_val(EXP_ID, fold, 'MF_time', mf_dt)
             RS = evalu.load_mf(MF_file_prefix, RS)
         # train and save
         t0 = time.time()
