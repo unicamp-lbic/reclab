@@ -25,11 +25,15 @@ def main():
     parser = argparse.ArgumentParser(description='Run recommender training/evaluation')
     parser.add_argument('action', help='train, test, metrics, clear_db, \
     clear_exp --id EXP_ID, clear_conf -c CONFIG, show_db')
-    parser.add_argument('-c', '--config', help='Configuration setting for this run \
+    parser.add_argument('-c', '--config',
+                        help='Configuration setting for this run \
     (see valid_configs in config.py)')
-    parser.add_argument('--id', help='experiment id to erase (user with clear exp)')
+    parser.add_argument('--id',
+                        help='experiment id to erase (user with clear exp)')
     parser.add_argument('-s','--sweep', help='do param sweep')
     parser.add_argument('-v','--values', help='values for param sweep')
+    parser.add_argument('--folds',
+                        help='specific folds to perform action on, comma-separated')
     args = parser.parse_args()
 
     '''
@@ -138,7 +142,11 @@ def run_exp(args, conf, exp_db):
     '''
     Run experiment
     '''
-    for fold in range(conf.nfolds):
+    if args.folds is not None:
+        folds = [int(x) for x in args.folds.split(',') if int(x) < conf.nfolds]
+    else:
+        folds = [x for x in range(conf.nfolds)]
+    for fold in folds:
         run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix)
 
 
