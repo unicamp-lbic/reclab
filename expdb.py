@@ -47,8 +47,8 @@ class ExperimentDB(object):
         self.db.to_pickle(self.dbfile)
         self.db.to_csv(self.dbfile+'.csv', na_rep=' ')
 
-    def _get_entries(self, conf):
-        df = pd_select(self.db, conf.as_dict())
+    def _get_entries(self, adict):
+        df = pd_select(self.db, adict)
         if df is None:
             return None
         elif df.shape[0] == 0:
@@ -57,7 +57,16 @@ class ExperimentDB(object):
             return df
 
     def get_id(self, conf):
-        df = self._get_entries(conf)
+        df = self._get_entries(conf.as_dict())
+        if df is not None:
+            '''
+            df.index returns a MultiIndex object
+            df.index.get_level_values('exp_id')[0] returns the exp_id
+            '''
+            return df.index.get_level_values('exp_id')[0]
+
+    def get_id_dict(self, adict):
+        df = self._get_entries(adict)
         if df is not None:
             '''
             df.index returns a MultiIndex object
@@ -127,6 +136,16 @@ class ExperimentDB(object):
         df = pd.DataFrame(data, index=index)
         self.db = self.db.append(df)
         self.save_db()
+
+    def add_experiment_dict(self, exp_id, adict):
+        nfolds = adict['nfolds']
+        data = [adict]*nfolds
+        index = [(exp_id, i) for i in range(nfolds)]
+        index = pd.MultiIndex.from_tuples(index, names=['exp_id', 'fold'])
+        df = pd.DataFrame(data, index=index)
+        self.db = self.db.append(df)
+        self.save_db()
+
 
     def clear_experiment(self, exp_id):
         call(["trash", './results/'+ exp_id + '/'])

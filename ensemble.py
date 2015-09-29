@@ -46,10 +46,7 @@ class ListEnsemble(BaseEnsemble):
 
 class MajorityEnsemble(ListEnsemble):
     def __init__(self, **varargs):
-        RS_factory = varargs['RS_factory']
-        RS_args = varargs
-        del RS_args['RS_factory']
-        self.RS_list = RS_factory(**RS_args)
+        self.RS_list = []
 
     def _list_ensemble_strategy(self, rec_lists):
         item_votes = Counter()
@@ -60,10 +57,7 @@ class MajorityEnsemble(ListEnsemble):
 
 class RankSumEnsemble(ListEnsemble):
     def __init__(self, **varargs):
-        RS_factory = varargs['RS_factory']
-        RS_args = varargs
-        del RS_args['RS_factory']
-        self.RS_list = RS_factory(**RS_args)
+        self.RS_list = []
 
     def _list_ensemble_strategy(self, rec_lists):
         rank_sum = Counter()
@@ -76,13 +70,27 @@ class RankSumEnsemble(ListEnsemble):
 
 class AvgRatingEnsemble(RatingEnsemble):
     def __init__(self, **varargs):
-        RS_factory = varargs['RS_factory']
-        RS_args = varargs
-        del RS_args['RS_factory']
-        self.RS_list = RS_factory(**RS_args)
+        self.RS_list = []
+        for arg, val in varargs.items():
+            self.__setattr__(arg, val)
 
     def _rating_ensemble_strategy(self, ratings):
         return np.mean(ratings)
+
+    def fit(split):
+        self.database = split.train
+
+class WAvgRatingEnsemble(RatingEnsemble):
+    def __init__(self, **varargs):
+        self.RS_list = []
+        for arg, val in varargs.items():
+            self.__setattr__(arg, val)
+
+    def _rating_ensemble_strategy(self, ratings):
+        return np.mean(ratings)
+
+    def fit(split):
+        self.database = split.train
 
 
 def RPBMFEnsembleFactory(RP_type='sparse', n_projections=5,

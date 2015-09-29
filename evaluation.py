@@ -51,6 +51,23 @@ def test_save(RS, out_filepath, split):
     rec.save(out_filepath+TEST_SUFFIX, RS)
 
 
+def ensemble_train_save(ens, out_filepath, split):
+    ens.fit(split)
+    ens.save(out_filepath+TRAIN_SUFFIX)
+
+
+def ensemble_test_save(ens, out_filepath, split):
+    ens.load(out_filepath+TRAIN_SUFFIX, split)
+    rec = SavedRecommendations()
+    rec.save(out_filepath+TEST_SUFFIX, ens)
+
+
+def load_recommendations(filepath):
+    rec = SavedRecommendations()
+    rec.load(filepath+TEST_SUFFIX)
+    return rec
+
+
 class Metrics(object):
     def __init__(self, split, filepath):
         self.RS = SavedRecommendations()
