@@ -36,6 +36,7 @@ def main():
                         help='specific folds to perform action on, comma-separated')
     parser.add_argument('--ensemble', help='--ensemble ENSEMBLE_CONFIG. \
     Do ensemble. Use with --sweep --config --values')
+    parser.add_argument('--set', help='--set test|valid, to user with metrics action')
     args = parser.parse_args()
 
     '''
@@ -130,7 +131,7 @@ def run_exp(args, conf, exp_db):
 
     RESULT_FOLDER = './results/' + EXP_ID + '/'
     if not os.path.isdir(RESULT_FOLDER):
-        os.makedirs(RESULT_FOLDER)
+        os.makedirs(RESULT_FOLDER, mode=0o775)
 
     '''
     Do database split if not done
@@ -141,15 +142,16 @@ def run_exp(args, conf, exp_db):
     split_fname_prefix = exp_db.get_arg_val(EXP_ID, 'split_fname_prefix', conf)
     if split_fname_prefix is None:
         database = databases.MatrixDatabase(data.dbread(conf.database))
-        if conf.nfolds == 1:
-            splitter = ds.HoldoutRatingSplitter(conf.pct_hidden,
-                                                conf.per_user,
-                                                conf.threshold)
-        else:
-            splitter = ds.kFoldRatingSplitter(conf.nfolds, conf.per_user)
-
+        splitter = ds.CVTestRatingSplitter(conf.nfolds,
+                                           conf.pct_hidden,
+                                           conf.per_user,
+                                           conf.threshold)
         splitter.split(database)
-        split_fname_prefix = splitter.save(data.get_db_path(conf.database))
+        split_folder = data.get_db_path(conf.database) \
+            + time.strftime('%Y%m%d%H%M%S') + '/'
+        if not os.path.isdir(split_folder):
+            os.makedirs(split_folder, mode=0o775, exist_ok=True)
+        split_fname_prefix = splitter.save(split_folder)
 
     '''
     Run experiment
@@ -208,6 +210,7 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
 
     elif args.action == 'metrics':
         metrics = evalu.Metrics(split, FOLD_PATH)
+        metrics.def_test_set(args.set)
         metrics.error_metrics()
         metrics.list_metrics(conf.threshold)
         for arg, val in metrics.metrics.items():
@@ -295,6 +298,7 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
 
         elif args.action == 'metrics':
             metrics = evalu.Metrics(split, FOLD_PATH)
+            metrics.def_test_set(args.set)
             metrics.error_metrics()
             metrics.list_metrics(conf.threshold)
             for arg, val in metrics.metrics.items():

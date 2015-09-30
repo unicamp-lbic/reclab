@@ -13,7 +13,7 @@ import data
 
 class Config(object):
     def __init__(self, database, RS_type, RS_args={},
-                 nfolds=1, per_user=True, pct_hidden=None, threshold=None,
+                 nfolds=1, per_user=True, pct_hidden=0.2, threshold=None,
                  is_MF=False):
         self.database = data.base.STD_DB_NAMES[database]
         self.RS_type = RS_type
@@ -45,7 +45,8 @@ dummy5fold = Config(
     database='ml100k',
     RS_type=rec.DummyRecommender,
     nfolds=5,
-    threshold=3
+    threshold=3,
+    pct_hidden=0.1
 )
 
 IB5fold = Config(
@@ -57,8 +58,8 @@ IB5fold = Config(
               'offline_kNN': True},
     nfolds=5,
     is_MF=False,
-    threshold=3
-
+    threshold=3,
+    pct_hidden=0.1
 )
 
 UB5fold = Config(
@@ -70,8 +71,8 @@ UB5fold = Config(
               'offline_kNN': True},
     nfolds=5,
     is_MF=False,
-    threshold=3
-
+    threshold=3,
+    pct_hidden=0.1
 )
 
 BMF5fold = Config(

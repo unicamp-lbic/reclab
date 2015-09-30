@@ -45,7 +45,7 @@ def read_ml100k_matrix():
     return matrix.toarray()
 
 def gen_testDB():
-    return TestDB(100, 50, min_items=0.2)
+    return TestDB(200, 100, min_items=0.2)
 
 '''
 Dictionary of available DB read functions

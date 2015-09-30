@@ -73,13 +73,14 @@ class Metrics(object):
         self.RS = SavedRecommendations()
         self.RS.load(filepath+TEST_SUFFIX)
         self.split = split
-        self.test_set = self.split.test
+        self.test_set = None
+        self.which = None
         self.metrics = dict()
 
     def _rlist_single_user(self, user_id, threshold):
         hidden_items = [i_id for i_id, rating in self.test_set[user_id]]
-        candidate_items = list(self.split.train.get_unrated_items(user_id)) + \
-                          hidden_items
+        candidate_items = list(self.split.train.get_unrated_items(user_id)) \
+            + hidden_items
 
         rlist = self.RS.recommend(user_id,
                                   threshold=threshold,
@@ -95,7 +96,20 @@ class Metrics(object):
             hit += 1 if item_id in rlist else 0
         return hit
 
+    def def_test_set(self, which):
+        self.which = which
+        if which == 'test':
+            self.test_set = self.split.test
+        elif which == 'valid':
+            self.test_set = self.split.valid
+        else:
+            raise ValueError("Invalid set name: %s (user 'valid' or 'test')"
+                             % which)
+
     def list_metrics(self, threshold):
+        if self.test_set is None:
+            raise ValueError('def_test_set must be called before metrics \
+            computation')
         recall = 0
         precision = 0
         F1 = 0
@@ -114,9 +128,9 @@ class Metrics(object):
                 precision += p/n_users
                 F1 += f1/n_users
 
-                self.metrics['P@%d' % atN] = precision
-                self.metrics['R@%d' % atN] = recall
-                self.metrics['F1@%d' % atN] = F1
+                self.metrics['P@%d_' % atN + self.which] = precision
+                self.metrics['R@%d_' % atN + self.which] = recall
+                self.metrics['F1@%d_' % atN + self.which] = F1
 
     def _absErr_single_rating(self, user_id, item_id, true_rating):
         pred_rating = self.RS.predict(user_id, item_id)
@@ -124,6 +138,9 @@ class Metrics(object):
         return absErr
 
     def error_metrics(self):
+        if self.test_set is None:
+            raise ValueError('def_test_set must be called before metrics \
+            computation')
         MAE = 0
         MSE = 0
         MAEu = 0
@@ -141,7 +158,7 @@ class Metrics(object):
         MSEu /= nUsers
         RMSE = np.sqrt(MSE)
         RMSEu = np.sqrt(MSEu)
-        self.metrics['RMSE'] = RMSE
-        self.metrics['MAE'] = MAE
-        self.metrics['RMSEu'] = RMSEu
-        self.metrics['MAEu'] = MAEu
+        self.metrics['RMSE_' + self.which] = RMSE
+        self.metrics['MAE_' + self.which] = MAE
+        self.metrics['RMSEu_' + self.which] = RMSEu
+        self.metrics['MAEu_' + self.which] = MAEu

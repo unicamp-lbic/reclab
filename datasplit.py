@@ -13,8 +13,9 @@ from collections import defaultdict
 
 
 class Split(object):
-    def __init__(self, train, test, config):
+    def __init__(self, train, valid=None, test=None, config=None):
         self.train = train
+        self.valid = valid
         self.test = test
         self.config = config
 
@@ -53,20 +54,63 @@ class Splitter(object):
     def save(self, filepath):
         fname_prefix = filepath + self.suffix
         if self.nfolds == 1:
-            split = Split(self.train, self.test, self.config)
+            split = Split(train=self.train, test=self.test, config=self.config)
             with open(fname_prefix + '_split.pkl', 'wb') as f:
                 pkl.dump(split, f)
         else:
             for i in range(self.nfolds):
                 config = self.config.copy()
                 config['fold'] = i
-                split = Split(self.train[i], self.test[i], config)
+                split = Split(train=self.train[i], test=self.test[i], config=config)
                 fname = fname_prefix + '_split_%d.pkl' % i
                 with open(fname, 'wb') as f:
                     pkl.dump(split, f)
         return fname_prefix
 
 
+class CVTestRatingSplitter(Splitter):
+    def __init__(self, nfolds=5, per_user=True, pct_hidden=0.2, threshold=0):
+        self.nfolds = nfolds
+        self.per_user = per_user
+        self.pct_hidden = pct_hidden
+        self.config = {'nfolds': nfolds, 'pct_hidden': pct_hidden,
+                       'per_user': per_user, 'threshold': threshold}
+        if nfolds <= 1:
+            self.CV_splitter = HoldoutRatingSplitter(pct_hidden, per_user,
+                                                    threshold)
+        else:
+            self.CV_splitter = kFoldRatingSplitter(nfolds, per_user)
+
+        self.Test_splitter = HoldoutRatingSplitter(pct_hidden, per_user,
+                                                   threshold)
+        self.train = None
+        self.test = None
+        self.valid = None
+        self.suffix = '_CV' + self.CV_splitter.suffix \
+            + '_test' + self.Test_splitter.suffix
+
+    def split(self, database):
+        self.Test_splitter.split(database)
+        self.CV_splitter.split(self.Test_splitter.train)
+        self.train = self.CV_splitter.train
+        self.valid = self.CV_splitter.test
+        self.test = self.Test_splitter.test
+
+    def save(self, filepath):
+        fname_prefix = filepath + self.suffix
+        if self.nfolds == 1:
+            split = Split(self.train, self.valid, self.test, self.config)
+            with open(fname_prefix + '_split.pkl', 'wb') as f:
+                pkl.dump(split, f)
+        else:
+            for i in range(self.nfolds):
+                config = self.config.copy()
+                config['fold'] = i
+                split = Split(self.train[i], self.valid[i], self.test, config)
+                fname = fname_prefix + '_split_%d.pkl' % i
+                with open(fname, 'wb') as f:
+                    pkl.dump(split, f)
+        return fname_prefix
 
 class kFoldRatingSplitter(Splitter):
     def __init__(self, nfolds=5, per_user=True):
@@ -110,9 +154,9 @@ class HoldoutRatingSplitter(Splitter):
         self.pct_hidden = pct_hidden
         self.threshold = threshold
         self.nfolds = 1
-        self.suffix = '%d_%d_holdout' % (int((1-pct_hidden)*100),
+        self.suffix = '_%d_%d_holdout' % (int((1-pct_hidden)*100),
                                          int(pct_hidden*100))
-        self.config = {'nfolds': nfolds, 'per_user': per_user,
+        self.config = {'nfolds': self.nfolds, 'per_user': per_user,
                        'pct_hidden': pct_hidden, 'threshold': threshold}
         self.hidden_coord = []
         self.train = None
@@ -122,7 +166,7 @@ class HoldoutRatingSplitter(Splitter):
         # get positions equal to or above threshold (ratings)
         row, col = np.where(matrix >= self.threshold)
         # len(row)== total number of ratings>=threshold
-        n_hidden = np.ceil(self, self.pct_hidden*len(row))
+        n_hidden = np.ceil(self.pct_hidden*len(row))
         # pick n_hidden random positions
         hidden_idx = np.random.randint(0, len(row), n_hidden)
         return (row[hidden_idx], col[hidden_idx])
@@ -131,8 +175,9 @@ class HoldoutRatingSplitter(Splitter):
         matrix = np.array(database.get_matrix())
         if self.per_user:
             for u, user_vector in enumerate(matrix):
-                rows, cols = self._get_hidden(user_vector)
-                self.hidden_coord += list(zip(rows, cols))
+                rows, cols = self._get_hidden(np.array(user_vector, ndmin=2))
+                self.hidden_coord += \
+                    list(zip([u for _ in range(len(rows))], cols))
         else:
             rows, cols = self._get_hidden(matrix)
             self.hidden_coord = list(zip(rows, cols))
