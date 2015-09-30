@@ -3,18 +3,21 @@
 import numpy as np
 from numpy.random import random_integers
 import scipy.sparse as sparse
+import pandas as pd
 
 
 DB_PATHS = {
     'ml100k': 'data/MovieLens100k/',
-    'TestDB': 'data/TestDB/'
+    'TestDB': 'data/TestDB/',
+    'delicious': 'data/Delicious2k/'
 }
 
 STD_DB_NAMES= {
     'MovieLens100k':'ml100k',
     'ml100k': 'ml100k',
     'TestDB': 'TestDB',
-    'testDB': 'TestDB'
+    'testDB': 'TestDB',
+    'delicious': 'delicious'
 }
 
 '''
@@ -44,6 +47,41 @@ def read_ml100k_matrix():
                                shape=(qtty['users'], qtty['items']))
     return matrix.toarray()
 
+def read_delicious():
+    nusers =  1867
+    nitems = 69226
+    PATH = DB_PATHS['delicious']
+    data = set()
+    users = {}
+    usercount = 0
+    items = {}
+    itemcount = 0
+    with open(PATH +  'user_taggedbookmarks.dat', 'r') as f:
+        for line in f:
+            elems = line.split('\t')
+            try:
+                user = int(elems[0])
+                if user not in users:
+                    users[user] = usercount
+                    usercount += 1
+                bookmark = int(elems[1])
+                if bookmark not in items:
+                    items[bookmark] = itemcount
+                    itemcount += 1
+                data.add((users[user], items[bookmark]))
+            except ValueError:
+                pass
+
+    pd.to_pickle({'usermap':users,'itemmap': items},
+                 PATH + 'useritemmapping.pkl')
+    data = list(data)
+    row = np.array([u for u, i in data])
+    col = np.array([i for u, i in data])
+    data = np.array([1 for u, i in data])
+    matrix = sparse.coo_matrix((data, (row, col)),
+                        shape=(nusers, nitems))
+    return matrix.toarray()
+
 def gen_testDB():
     return TestDB(200, 100, min_items=0.2)
 
@@ -52,7 +90,8 @@ Dictionary of available DB read functions
 '''
 DB_READ = {
     'ml100k': read_ml100k_matrix,
-    'TestDB': gen_testDB
+    'TestDB': gen_testDB,
+    'delicious': read_delicious
 }
 
 def dbread(dbname):
