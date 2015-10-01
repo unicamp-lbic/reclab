@@ -142,10 +142,10 @@ def run_exp(args, conf, exp_db):
     split_fname_prefix = exp_db.get_arg_val(EXP_ID, 'split_fname_prefix', conf)
     if split_fname_prefix is None:
         database = databases.MatrixDatabase(data.dbread(conf.database))
-        splitter = ds.CVTestRatingSplitter(conf.nfolds,
-                                           conf.pct_hidden,
-                                           conf.per_user,
-                                           conf.threshold)
+        splitter = ds.CVTestRatingSplitter(nfolds=conf.nfolds,
+                                           pct_hidden=conf.pct_hidden,
+                                           per_user=conf.per_user,
+                                           threshold=conf.threshold)
         splitter.split(database)
         split_folder = data.get_db_path(conf.database) \
             + time.strftime('%Y%m%d%H%M%S') + '/'

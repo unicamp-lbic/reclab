@@ -85,14 +85,16 @@ class DummyRecommender(RatingPredictor):
 
 class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
     def __init__(self, n_neighbors=10, algorithm='brute',
-                 metric='cosine', offline_kNN=True):
+                 metric='cosine', offline_kNN=True, weighting='none',
+                 **kNN_args):
         self.database = None
         self.n_neighbors = n_neighbors
         self.model_size = 30 * n_neighbors
+        self.weighting = weighting
         self.metric = 'cosine'
         self.offline_kNN = offline_kNN
         self.kNN = neighbors.kNN(n_neighbors=self.model_size,
-                                 algorithm=algorithm, metric=metric)
+                                 algorithm=algorithm, metric=metric, **kNN_args)
 
     def fit(self, database):
         self.database = database
@@ -129,14 +131,16 @@ class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
 
 
 class UserBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
-    def __init__(self, n_neighbors=20, algorithm='brute',
-                 metric='correlation', offline_kNN=True):
+    def __init__(self, offline_kNN=True, weighting='none',
+                 n_neighbors=20, algorithm='brute', metric='correlation',
+                 **kNN_args):
         self.database = None
+        self.weighting = weighting
         self.metric = metric
         self.n_neighbors = n_neighbors
         self.offline_kNN = offline_kNN
         self.kNN = neighbors.kNN(n_neighbors=n_neighbors,
-                                 algorithm=algorithm, metric=metric)
+                                 algorithm=algorithm, metric=metric, **kNN_args)
 
     def fit(self, database):
         self.database = database
@@ -193,13 +197,15 @@ class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
     __MF_type__ = BMF
 
     def __MF_args__(RS_args):
-        args = ['min_coverage', 'bin_threshold']
+        args = ['min_coverage', 'bin_threshold', 'weighting']
         return dict([(arg, RS_args[arg]) for arg in args])
 
     def __init__(self, neighbor_type='user', offline_kNN=False,
+                 bin_threshold=0, min_coverage=1.0, weighting='none',
                  n_neighbors=10, algorithm='brute', metric='cosine',
-                 bin_threshold=0, min_coverage=1.0):
+                 model_size=30, **kNN_args):
         self.database = None
+        self.weighting = weighting
         self.metric = metric
         self.neighbor_type = neighbor_type
         self.bin_threshold = bin_threshold
@@ -209,12 +215,13 @@ class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
         self.n_neighbors = n_neighbors
 
         if offline_kNN:
-            self.model_size = 30 * n_neighbors
+            self.model_size = model_size * n_neighbors
         else:
             self.model_size = n_neighbors
 
-        self.kNN = neighbors.kNN(n_neighbors=self.model_size,
-                                 algorithm=algorithm, metric=metric)
+        self.kNN = \
+            neighbors.kNN(n_neighbors=self.model_size,
+                          algorithm=algorithm, metric=metric, **kNN_args)
         self.offline_kNN = offline_kNN
         self.kNN_graph = None
 

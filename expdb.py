@@ -86,18 +86,15 @@ class ExperimentDB(object):
                 try to locate compatible experiment for specific args
                 '''
                 if arg_name == ARGS['split'] or arg_name == ARGS['MF']:
-                    if conf.nfolds == 1:
-                        select = {'database': conf.database,
-                                  'nfolds': conf.nfolds,
-                                  'per_user': conf.per_user,
-                                  'pct_hidden': conf.pct_hidden}
-                    else:
-                        select = {'database': conf.database,
-                                  'nfolds': conf.nfolds,
-                                  'per_user': conf.per_user}
+                    select = {'database': conf.database,
+                              'nfolds': conf.nfolds,
+                              'per_user': conf.per_user,
+                              'pct_hidden': conf.pct_hidden}
+
                     if arg_name == ARGS['MF']:
                         select.update({'MF_type': conf.MF_type})
                         select.update(conf.MF_args)
+
                     df = pd_select(self.db, select)
                     if df is None:
                         val = None

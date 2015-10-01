@@ -10,23 +10,19 @@ import numpy as np
 
 
 class kNN(object):
-    def __init__(self, n_neighbors=5,
-                 algorithm='brute', metric='minkowski'):
+    def __init__(self, algorithm, metric, **kNN_args):
         self.estimator = None
         self.graph = None
         if not algorithm == 'LSH':
             self.estimator = \
-                NearestNeighbors(n_neighbors=n_neighbors, radius=1.0,
-                                 algorithm=algorithm, leaf_size=30,
-                                 metric=metric, p=2, metric_params=None)
+                NearestNeighbors(**kNN_args)
         elif algorithm == 'LSH':
+            kNN_args['n_candidates'] = \
+                kNN_args['n_candidates']*kNN_args['n_neighbors']
             if metric != 'cosine':
                 raise ValueError('LSH forest can only use cosine metric')
             self.estimator = \
-                LSHForest(n_estimators=10, radius=1.0,
-                          n_candidates=2*n_neighbors, n_neighbors=n_neighbors,
-                          min_hash_match=4, radius_cutoff_ratio=0.9,
-                          random_state=None)
+                LSHForest(**kNN_args)
 
     def fit(self, X, keepgraph=False):
         self.estimator = self.estimator.fit(X)
