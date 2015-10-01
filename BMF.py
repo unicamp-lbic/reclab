@@ -6,6 +6,7 @@ Created on Mon Apr  6 16:34:16 2015
 """
 import numpy as np
 from scipy import sparse
+import time
 
 
 class Concept(object):
@@ -118,8 +119,8 @@ def factors2matrices(factor_set, shape):
     return P.toarray(), Q.toarray()
 
 def bool_dot(m1, m2):
-    m1 = m1.toarray() > 0
-    m2 = m2.toarray() > 0
+    m1 = m1 > 0
+    m2 = m2 > 0
     return np.dot(m1, m2).astype(np.int)
 
 
@@ -133,30 +134,42 @@ def _test():
     result = set([Concept([0, 2], [0, 4, 5]), Concept([2, 4], [1, 3, 5]),
                  Concept([0, 1, 3, 4], [2]), Concept([0, 2, 3, 4], [5])])
 
-
+    t0 = time.time()
     factors = bmf(matrix)
-    print(factors)
     P, Q = factors2matrices(factors, matrix.shape)
+    print('time:', time.time()-t0)
+    print(factors)
     M = bool_dot(P, Q.T)
     assert((M == matrix).all())
 
+    t0 = time.time()
     sparse_mat = sparse.lil_matrix(matrix)
     factors = bmf(sparse_mat)
-    print(factors)
     P, Q = factors2matrices(factors, matrix.shape)
+    print('time:', time.time()-t0)
+    print(factors)
     M = bool_dot(P, Q.T)
     assert((M == matrix).all())
 
 
-    print(P.toarray())
-    print(Q.T.toarray())
+    print(P)
+    print(Q.T)
 
 def _large_test():
     shape = (1000, 50)
     matrix = np.random.binomial(n=1, p=0.2, size=shape )
+    t0 = time.time()
     factors = bmf(matrix)
     P, Q = factors2matrices(factors, matrix.shape)
+    print('time:', time.time()-t0)
     M = bool_dot(P, Q.T)
     assert((M == matrix).all())
     print(P.shape)
 
+    t0 = time.time()
+    sparse_mat = sparse.lil_matrix(matrix)
+    factors = bmf(sparse_mat)
+    P, Q = factors2matrices(factors, matrix.shape)
+    print('time:', time.time()-t0)
+    M = bool_dot(P, Q.T)
+    assert((M == matrix).all())
