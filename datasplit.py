@@ -164,11 +164,23 @@ class HoldoutRatingSplitter(Splitter):
 
     def _get_hidden(self, matrix):
         # get positions equal to or above threshold (ratings)
-        row, col = np.where(matrix >= self.threshold)
+        row, col = np.where(matrix > self.threshold)
         # len(row)== total number of ratings>=threshold
         n_hidden = np.ceil(self.pct_hidden*len(row))
-        # pick n_hidden random positions
-        hidden_idx = np.random.randint(0, len(row), n_hidden)
+        if n_hidden > 0:
+            # pick n_hidden random positions
+            hidden_idx = np.random.randint(0, len(row), n_hidden)
+        else:
+            hidden_idx = np.array([], dtype=int)
+        # get positions equal to or above threshold (ratings)
+        row, col = np.where(matrix <= self.threshold)
+        # len(row)== total number of ratings>=threshold
+        n_hidden = np.ceil(self.pct_hidden*len(row))
+        if n_hidden > 0:
+            # pick n_hidden random positions
+            hidden_idx = np.hstack((hidden_idx,
+                                    np.random.randint(0, len(row), n_hidden)))
+
         return (row[hidden_idx], col[hidden_idx])
 
     def split(self, database):
