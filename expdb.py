@@ -8,8 +8,9 @@ import os
 import pandas as pd
 from utils import pd_select
 from subprocess import call
+from lockfile import locked
 
-
+DBLOCK = 'expdb.lock'
 DBFILE = 'experiments.db'
 ARGS = {'MF':'MF_file_prefix',
         'split': 'split_fname_prefix',
@@ -17,33 +18,26 @@ ARGS = {'MF':'MF_file_prefix',
         'test': 'test_file_prefix',
         'metrics': 'metrics_file_prefix'}
 
-def load_experiments_db(dbfile=DBFILE):
-    exp_db = ExperimentDB()
-    if not os.path.isfile(dbfile):
-        exp_db.new_db(dbfile)
-        exp_db.save_db()
-    else:
-        exp_db.load_db(dbfile)
-    return exp_db
-
-def save_experiments_db(exp_db):
-    exp_db.save_db()
 
 class ExperimentDB(object):
-    def __init__(self):
+    @locked(DBLOCK)
+    def __init__(self, dbfile=DBFILE):
         self.db = None
-        self.dbfile = None
-
-    def load_db(self, dbfile):
-        self.db = pd.read_pickle(dbfile)
         self.dbfile = dbfile
+        if not os.path.isfile(dbfile):
+            self._new_db()
+        else:
+            self._load_db()
+        self._save_db()
 
-    def new_db(self, dbfile):
+    def _load_db(self):
+        self.db = pd.read_pickle(self.dbfile)
+
+    def _new_db(self):
         self.db = pd.DataFrame()
-        self.dbfile = dbfile
         self.save_db()
 
-    def save_db(self):
+    def _save_db(self):
         self.db.to_pickle(self.dbfile)
         self.db.to_csv(self.dbfile+'.csv', na_rep=' ')
 
@@ -56,7 +50,9 @@ class ExperimentDB(object):
         else:
             return df
 
+    @locked(DBLOCK)
     def get_id(self, conf):
+        self._load_db()
         df = self._get_entries(conf.as_dict())
         if df is not None:
             '''
@@ -65,7 +61,9 @@ class ExperimentDB(object):
             '''
             return df.index.get_level_values('exp_id')[0]
 
+    @locked(DBLOCK)
     def get_id_dict(self, adict):
+        self._load_db()
         df = self._get_entries(adict)
         if df is not None:
             '''
@@ -77,7 +75,9 @@ class ExperimentDB(object):
     def get_arg_val(self, exp_id, arg_name, conf=None):
         return self.get_fold_arg_val(exp_id, 0, arg_name, conf)
 
+    @locked(DBLOCK)
     def get_fold_arg_val(self, exp_id, fold, arg_name, conf=None):
+        self._load_db()
         try:
             val = self.db.get_value((exp_id, fold), arg_name)
             if pd.isnull(val) and conf is not None:
@@ -118,36 +118,45 @@ class ExperimentDB(object):
         except KeyError:
             return None
 
+    @locked(DBLOCK)
     def set_arg_val(self, exp_id, arg_name, arg_val):
+        self._load_db()
         self.db.set_value(exp_id, arg_name, arg_val)
-        self.save_db()
+        self._save_db()
 
+    @locked(DBLOCK)
     def set_fold_arg_val(self, exp_id, fold, arg_name, arg_val):
+        self._load_db()
         self.db.set_value((exp_id, fold), arg_name, arg_val)
-        self.save_db()
+        self._save_db()
 
+    @locked(DBLOCK)
     def add_experiment(self, exp_id, conf):
+        self._load_db()
         data = [conf.as_dict()]*conf.nfolds
         index = [(exp_id, i) for i in range(conf.nfolds)]
         index = pd.MultiIndex.from_tuples(index, names=['exp_id', 'fold'])
         df = pd.DataFrame(data, index=index)
         self.db = self.db.append(df)
-        self.save_db()
+        self._save_db()
 
+    @locked(DBLOCK)
     def add_experiment_dict(self, exp_id, adict):
+        self._load_db()
         nfolds = adict['nfolds']
         data = [adict]*nfolds
         index = [(exp_id, i) for i in range(nfolds)]
         index = pd.MultiIndex.from_tuples(index, names=['exp_id', 'fold'])
         df = pd.DataFrame(data, index=index)
         self.db = self.db.append(df)
-        self.save_db()
+        self._save_db()
 
-
+    @locked(DBLOCK)
     def clear_experiment(self, exp_id):
+        self._load_db()
         call(["trash", './results/'+ exp_id + '/'])
         self.db.drop(exp_id, inplace=True)
-        self.save_db()
+        self._save_db()
 
     def clear_conf(self, conf):
         self.clear_experiment(self.get_id(conf))

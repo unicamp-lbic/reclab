@@ -49,7 +49,7 @@ def main():
     '''
     Load experiments DB
     '''
-    exp_db = expdb.load_experiments_db()
+    exp_db = expdb.ExperimentDB()
 
     '''
     process show_db
@@ -219,10 +219,6 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
     else:
         raise ValueError('Invalid action')
 
-    '''
-    Save modified expdb
-    '''
-    expdb.save_experiments_db(exp_db)
 
     return RS
 
