@@ -50,7 +50,7 @@ dummy5fold = Config(
 )
 
 IB5fold = Config(
-    database='testDB',
+    database='ml100k',
     RS_type=rec.ItemBased,
     RS_args={'n_neighbors': 20,
              'model_size': 2,
@@ -65,7 +65,7 @@ IB5fold = Config(
 )
 
 UB5fold = Config(
-    database='testDB',
+    database='ml100k',
     RS_type=rec.UserBased,
     RS_args={'n_neighbors': 20,
              'algorithm': 'brute',
@@ -79,7 +79,7 @@ UB5fold = Config(
 )
 
 BMF5fold = Config(
-    database='testDB',
+    database='ml100k',
     RS_type=rec.BMFrecommender,
     RS_args={'n_neighbors': 20,
              'model_size': 2,
@@ -96,8 +96,8 @@ BMF5fold = Config(
     pct_hidden=0.2
 )
 
-BMFLSHtest = Config(
-    database='testDB',
+BMFLSH5fold = Config(
+    database='ml100k',
     RS_type=rec.BMFrecommender,
     RS_args={'n_neighbors': 20,
              'model_size': 2,
@@ -121,7 +121,7 @@ Dictionary of valid configuration settings
 '''
 valid_configs = {
     'BMF5fold': BMF5fold,
-    'BMFLSHtest': BMFLSHtest,
+    'BMFLSH5fold': BMFLSH5fold,
     'IB5fold': IB5fold,
     'dummy5fold': dummy5fold,
     'UB5fold': UB5fold

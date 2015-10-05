@@ -36,7 +36,7 @@ def main():
                         help='specific folds to perform action on, comma-separated')
     parser.add_argument('--ensemble', help='--ensemble ENSEMBLE_CONFIG. \
     Do ensemble. Use with --sweep --config --values')
-    parser.add_argument('--set', help='--set test|valid, to user with metrics action')
+    parser.add_argument('--set', help='--set test|valid, to use with metrics action')
     args = parser.parse_args()
 
     '''
