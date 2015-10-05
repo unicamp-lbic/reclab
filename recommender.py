@@ -197,7 +197,7 @@ class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
     __MF_type__ = BMF
 
     def __MF_args__(RS_args):
-        args = ['min_coverage', 'bin_threshold', 'weighting']
+        args = ['min_coverage', 'bin_threshold']
         return dict([(arg, RS_args[arg]) for arg in args])
 
     def __init__(self, neighbor_type='user', offline_kNN=False,
