@@ -13,6 +13,7 @@ from lockfile import locked
 DBLOCK = 'expdb.lock'
 DBFILE = 'experiments.db'
 ARGS = {'MF':'MF_file_prefix',
+        'MF_time':'MF_time',
         'split': 'split_fname_prefix',
         'train':  'train_file_prefix',
         'test': 'test_file_prefix',
@@ -28,14 +29,13 @@ class ExperimentDB(object):
             self._new_db()
         else:
             self._load_db()
-        self._save_db()
 
     def _load_db(self):
         self.db = pd.read_pickle(self.dbfile)
 
     def _new_db(self):
         self.db = pd.DataFrame()
-        self.save_db()
+        self._save_db()
 
     def _save_db(self):
         self.db.to_pickle(self.dbfile)
@@ -85,7 +85,8 @@ class ExperimentDB(object):
                 did not find value for this experiment
                 try to locate compatible experiment for specific args
                 '''
-                if arg_name == ARGS['split'] or arg_name == ARGS['MF']:
+                if arg_name == ARGS['split'] or arg_name == ARGS['MF'] \
+                    or arg_name == ARGS['MF_time']:
                     select = {'database': conf.database,
                               'nfolds': conf.nfolds,
                               'per_user': conf.per_user,
@@ -111,9 +112,10 @@ class ExperimentDB(object):
             # if it does not, refered experiment was deleted
             # clear entry
             if val is not None and not pd.isnull(val):
-                if not os.path.exists(os.path.split(val)[0]):
-                    val = None
-                    self.db.set_value((exp_id, fold), arg_name, '')
+                if arg_name.find('file') > -1:
+                    if not os.path.exists(os.path.split(val)[0]):
+                        val = None
+                        self.db.set_value((exp_id, fold), arg_name, '')
             return val
         except KeyError:
             return None

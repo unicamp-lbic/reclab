@@ -8,6 +8,7 @@ Created on Tue Sep 15 16:54:46 2015
 
 import argparse
 import time
+from datetime import datetime
 import config
 import os
 import evaluation as evalu
@@ -34,6 +35,8 @@ def main():
     parser.add_argument('-v','--values', help='values for param sweep')
     parser.add_argument('--folds',
                         help='specific folds to perform action on, comma-separated')
+    parser.add_argument('--setpar')
+    parser.add_argument('--parval')
     parser.add_argument('--ensemble', help='--ensemble ENSEMBLE_CONFIG. \
     Do ensemble. Use with --sweep --config --values')
     parser.add_argument('--set', help='--set test|valid, to use with metrics action')
@@ -73,6 +76,28 @@ def main():
     except KeyError:
         raise KeyError('Invalid configuration setting')
 
+    '''
+    Check for --setpar
+    '''
+    if args.setpar is not None:
+        if args.parval is not None:
+            try:
+                value = int(args.parval)
+            except ValueError:
+                try:
+                    value = float(args.parval)
+                except ValueError:
+                    value = args.parval
+            try:
+                conf.__getattribute__(args.setpar)
+                conf.__setattr__(args.setpar, value)
+            except AttributeError:
+                if args.setpar in conf.RS_args:
+                    conf.RS_args[args.setpar] = value
+                else:
+                    raise ValueError('Invalid config param')
+        else:
+            raise ValueError('Must use --setpar with --parval')
     '''
     process clear_conf command
     '''
@@ -126,7 +151,7 @@ def run_exp(args, conf, exp_db):
     '''
     EXP_ID = exp_db.get_id(conf)
     if EXP_ID is None:
-        EXP_ID = time.strftime('%Y%m%d%H%M%S')
+        EXP_ID = get_timestamp()
         exp_db.add_experiment(EXP_ID, conf)
 
     RESULT_FOLDER = './results/' + EXP_ID + '/'
@@ -148,7 +173,7 @@ def run_exp(args, conf, exp_db):
                                            threshold=conf.threshold)
         splitter.split(database)
         split_folder = data.get_db_path(conf.database) \
-            + time.strftime('%Y%m%d%H%M%S') + '/'
+            + get_timestamp() + '/'
         if not os.path.isdir(split_folder):
             os.makedirs(split_folder, mode=0o775, exist_ok=True)
         split_fname_prefix = splitter.save(split_folder)
@@ -186,12 +211,13 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
         # Gen/Load MF if applicable
         if conf.is_MF:
             MF_file_prefix = exp_db.get_fold_arg_val(EXP_ID, fold, 'MF_file_prefix', conf)
+            mf_dt = exp_db.get_fold_arg_val(EXP_ID, fold, 'MF_time', conf)
             if MF_file_prefix is None:
                 MF_file_prefix = FOLD_PATH
                 t0 = time.time()
                 evalu.gen_mf(split, MF_file_prefix, RS)
                 mf_dt = time.time() - t0
-                exp_db.set_fold_arg_val(EXP_ID, fold, 'MF_time', mf_dt)
+            exp_db.set_fold_arg_val(EXP_ID, fold, 'MF_time', mf_dt)
             exp_db.set_fold_arg_val(EXP_ID, fold, 'MF_file_prefix', MF_file_prefix)
             RS = evalu.load_mf(MF_file_prefix, RS)
         # train and save
@@ -300,6 +326,10 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
             for arg, val in metrics.metrics.items():
                 exp_db.set_fold_arg_val(EXP_ID, fold, arg, val)
 
+def get_timestamp():
+    dt = datetime.now()
+    ms = int(int(dt.microsecond)/1e4)
+    return dt.strftime('%Y%m%d%H%M%S') + str(ms)
 
 if __name__=='__main__':
     main()
