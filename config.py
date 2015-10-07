@@ -120,6 +120,7 @@ BMFRP5fold = Config(
     database='ml100k',
     RS_type=rec.BMFRPrecommender,
     RS_args={'RP_type': 'sparse',
+             'dim_red': 0.8,
              'n_neighbors': 20,
              'model_size': 2,
              'neighbor_type': 'user',
