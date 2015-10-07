@@ -35,8 +35,7 @@ def main():
     parser.add_argument('-v','--values', help='values for param sweep')
     parser.add_argument('--folds',
                         help='specific folds to perform action on, comma-separated')
-    parser.add_argument('--setpar')
-    parser.add_argument('--parval')
+    parser.add_argument('--setpar', action='append', help='--setpar parname=value')
     parser.add_argument('--ensemble', help='--ensemble ENSEMBLE_CONFIG. \
     Do ensemble. Use with --sweep --config --values')
     parser.add_argument('--set', help='--set test|valid, to use with metrics action')
@@ -80,24 +79,28 @@ def main():
     Check for --setpar
     '''
     if args.setpar is not None:
-        if args.parval is not None:
-            try:
-                value = int(args.parval)
-            except ValueError:
+        for par_val in args.setpar:
+            if par_val.find('=') < 0:
+                raise ValueError('Must use --setpar parname=value')
+            par, value = tuple(par_val.split('='))
+            if value is not None:
                 try:
-                    value = float(args.parval)
+                    value = int(value)
                 except ValueError:
-                    value = args.parval
-            try:
-                conf.__getattribute__(args.setpar)
-                conf.__setattr__(args.setpar, value)
-            except AttributeError:
-                if args.setpar in conf.RS_args:
-                    conf.RS_args[args.setpar] = value
-                else:
-                    raise ValueError('Invalid config param')
-        else:
-            raise ValueError('Must use --setpar with --parval')
+                    try:
+                        value = float(value)
+                    except ValueError:
+                        pass
+                try:
+                    conf.__getattribute__(par)
+                    conf.__setattr__(par, value)
+                except AttributeError:
+                    if par in conf.RS_args:
+                        conf.RS_args[par] = value
+                    else:
+                        raise ValueError('Invalid config param')
+            else:
+                raise ValueError('Must use --setpar parname=value')
     '''
     process clear_conf command
     '''
