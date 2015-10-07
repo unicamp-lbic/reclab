@@ -116,6 +116,25 @@ BMFLSH5fold = Config(
     pct_hidden=0.2
 )
 
+BMFRP5fold = Config(
+    database='ml100k',
+    RS_type=rec.BMFRPrecommender,
+    RS_args={'RP_type': 'sparse',
+             'n_neighbors': 20,
+             'model_size': 2,
+             'neighbor_type': 'user',
+             'algorithm': 'brute',
+             'metric': 'cosine',
+             'min_coverage': 1.0,
+             'bin_threshold': 3,
+             'offline_kNN': True,
+             'weighting': 'tf-idf'},
+    nfolds=5,
+    is_MF=True,
+    threshold=3,
+    pct_hidden=0.2
+)
+
 '''
 Dictionary of valid configuration settings
 '''
