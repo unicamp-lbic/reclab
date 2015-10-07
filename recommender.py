@@ -372,12 +372,12 @@ class BMFRPrecommender(BMFrecommender):
         if self.neighbor_type == 'user':
             self.P = self.RP.fit_transform(self.P)
             if self.offline_kNN:
-                self.kNN.fit(self.P)
+                self.kNN.fit(self.P, keepgraph=True)
 
         elif self.neighbor_type == 'item':
             self.Q = self.RP.fit_transform(self.Q)
             if self.offline_kNN:
-                self.kNN.fit(self.Q)
+                self.kNN.fit(self.Q, keepgraph=True)
         else:
             raise ValueError('Invalid neighbor_type parameter passed to\
                              constructor')
