@@ -265,7 +265,7 @@ class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
             self.gen_mf(self.database)
 
         if self.weighting == 'tf-idf':
-            tfidf = TfidfTransformer(norm='none', user_idf=True,
+            tfidf = TfidfTransformer(norm=None, use_idf=True,
                                      smooth_idf=True, sublinear_tf=False)
             self.P = tfidf.fit_transform(self.P)
             self.Q = tfidf.fit_transform(self.Q)
@@ -354,7 +354,7 @@ class BMFRPrecommender(BMFrecommender):
                 mf.fit(self.database.get_matrix(threshold=self.bin_threshold))
 
         if self.weighting == 'tf-idf':
-            tfidf = TfidfTransformer(norm='none', user_idf=True,
+            tfidf = TfidfTransformer(norm=None, use_idf=True,
                                      smooth_idf=True, sublinear_tf=False)
             self.P = tfidf.fit_transform(self.P)
             self.Q = tfidf.fit_transform(self.Q)
