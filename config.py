@@ -141,6 +141,7 @@ Dictionary of valid configuration settings
 valid_configs = {
     'BMF5fold': BMF5fold,
     'BMFLSH5fold': BMFLSH5fold,
+    'BMFRP5fold': BMFRP5fold,
     'IB5fold': IB5fold,
     'dummy5fold': dummy5fold,
     'UB5fold': UB5fold
