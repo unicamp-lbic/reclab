@@ -13,7 +13,7 @@ import numpy as np
 from utils import oneD
 from sklearn.random_projection import GaussianRandomProjection,\
                                       SparseRandomProjection
-
+from sklearn.feature_extraction.text import TfidfTransformer
 
 class NeighborStrategy(object):
     __metaclass__ = abc.ABCMeta
@@ -226,6 +226,7 @@ class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
         self.kNN_graph = None
 
     def transform(self, user_vector):
+        raise NotImplementedError()
         items = set(np.where(oneD(user_vector) > self.bin_threshold)[0])
         orig_len = len(items)
         factors = [(set(np.where(line == 1)[0]), i)
@@ -262,6 +263,12 @@ class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
         self.database = database
         if self.P is None or  self.Q is None:
             self.gen_mf(self.database)
+
+        if self.weighting == 'tf-idf':
+            tfidf = TfidfTransformer(norm='none', user_idf=True,
+                                     smooth_idf=True, sublinear_tf=False)
+            self.P = tfidf.fit_transform(self.P)
+            self.Q = tfidf.fit_transform(self.Q)
 
         if self.offline_kNN:
             if self.neighbor_type == 'user':
@@ -345,6 +352,12 @@ class BMFRPrecommender(BMFrecommender):
             mf = BMF(self.min_coverage)
             self.P, self.Q = \
                 mf.fit(self.database.get_matrix(threshold=self.bin_threshold))
+
+        if self.weighting == 'tf-idf':
+            tfidf = TfidfTransformer(norm='none', user_idf=True,
+                                     smooth_idf=True, sublinear_tf=False)
+            self.P = tfidf.fit_transform(self.P)
+            self.Q = tfidf.fit_transform(self.Q)
 
         if self.dim_red != 'auto':
             n_components = int(np.ceil(self.dim_red*self.P.shape[1]))
