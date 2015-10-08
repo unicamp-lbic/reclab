@@ -12,27 +12,6 @@ import matplotlib.pyplot as plt
 def oneD(array):
     return np.array(np.array(array).squeeze(), ndmin=1)
 
-def _get_zero_mean_matrix(matrix, along='users'):
-    rows, cols = matrix.shape
-    if along == 'users':
-        mean_vals = np.zeros(rows)
-        for i in range(rows):
-            non_zero = [elem for elem in matrix[i, :] if elem > 0]
-            if non_zero != []:
-                mean_vals[i] = \
-                    sum(non_zero)/float(len(non_zero))
-            matrix[i, :] -= mean_vals[i]
-    else:  # Along Items
-        mean_vals = np.zeros(rows)
-        for i in range(cols):
-            non_zero = [elem for elem in matrix[:, i] if elem > 0]
-            if non_zero != []:
-                mean_vals[i] = \
-                    sum(non_zero)/float(len(non_zero))
-            matrix[:, i] -= mean_vals[i]
-
-    return matrix, mean_vals
-
 
 def read_result(fname, path='', meanstd=True):
     splitted = fname[:fname.find('pct')-4].split('_')
