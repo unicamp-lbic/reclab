@@ -179,10 +179,10 @@ def run_exp(args, conf, exp_db):
         if not os.path.isdir(split_folder):
             os.makedirs(split_folder, mode=0o775, exist_ok=True)
         split_fname_prefix = splitter.split_save(database, split_folder)
-        # Save split fname prefix on this experiment's entry
-        for fold in range(conf.nfolds):
-            exp_db.set_fold_arg_val(EXP_ID, fold,
-                                    'split_fname_prefix', split_fname_prefix)
+    # Save split fname prefix on this experiment's entry
+    for fold in range(conf.nfolds):
+        exp_db.set_fold_arg_val(EXP_ID, fold,
+                                'split_fname_prefix', split_fname_prefix)
 
     if args.action == 'split':
         exit()
