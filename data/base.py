@@ -80,7 +80,7 @@ def read_delicious():
     data = np.array([1 for u, i in data])
     matrix = sparse.coo_matrix((data, (row, col)),
                         shape=(nusers, nitems))
-    return matrix.toarray()
+    return matrix
 
 def gen_testDB():
     return TestDB(200, 100, min_items=0.2)

@@ -74,14 +74,17 @@ class MatrixDatabase(BaseDatabase):
     def n_items(self):
         return self.matrix.shape[1]
 
-    def get_matrix(self, zero_mean=False, threshold=None):
+    def get_matrix(self, zero_mean=False, threshold=None, sparse=False):
         if threshold is not None:
             if self.thresholded is None:
                 if sp.issparse(self.matrix):
                     self.thresholded = self.matrix > threshold
                     self.thresholded.data = np.array(self.thresholded.data,
                                                      dtype=np.float)
-                    return self.thresholded.toarray()
+                    if sparse:
+                        return self.thresholded
+                    else:
+                        return self.thresholded.toarray()
                 else:
                     self.thresholded = \
                         np.array(self.matrix > threshold, dtype=np.float)
@@ -90,13 +93,19 @@ class MatrixDatabase(BaseDatabase):
             if self.zero_mean_matrix is None:
                 self._compute_zero_mean()
             if sp.issparse(self.matrix):
-                return self.zero_mean_matrix.toarray(), self.user_means
+                if sparse:
+                    return self.zero_mean_matrix, self.user_means
+                else:
+                    return self.zero_mean_matrix.toarray(), self.user_means
             else:
                 return self.zero_mean_matrix, self.user_means
 
         else:
             if sp.issparse(self.matrix):
-                return self.matrix.toarray()
+                if sparse:
+                    return self.matrix
+                else:
+                    return self.matrix.toarray()
             else:
                 return self.matrix
 
@@ -123,8 +132,13 @@ class MatrixDatabase(BaseDatabase):
             return vector
 
     def get_rating_list(self, user_id):
-        vector = self.get_user_vector(self, user_id)
-        alist = [(r, i) for i, r in enumerate(vector) if r != 0]
+        if sp.issparse(self.matrix):
+            ratings = self.matrix[user_id, :].data.tolist()
+            items = self.matrix[user_id, :].indices.tolist()
+            alist = list(zip(ratings, items))
+        else:
+            vector = self.get_user_vector(user_id)
+            alist = [(r, i) for i, r in enumerate(vector) if r != 0]
         alist.sort()
         return [(i, r) for r, i in alist]
 
@@ -145,7 +159,7 @@ class MatrixDatabase(BaseDatabase):
     def get_unrated_items(self, user_id):
         "return unrated item ids for user"
         if sp.issparse(self.matrix):
-            rated = set(self.matrix[user_id,:].indices)
+            rated = set(self.matrix[user_id, :].indices)
             return [item for item in range(self.n_items())
                     if item not in rated]
         else:
@@ -188,10 +202,15 @@ def _test_sparse_matrixdb():
 
 
 class HiddenRatingsDatabase(MatrixDatabase):
+
     def __init__(self, matrix, hidden_coord):
         MatrixDatabase.__init__(self, matrix.copy())
+        if sp.issparse(self.matrix):
+            self.matrix = self.matrix.tolil()
         for u, i in hidden_coord:
             self.matrix[u, i] = 0
+        if sp.issparse(self.matrix):
+            self.matrix = self.matrix.tocsr()
 
 
 class SubDatabase(MatrixDatabase):

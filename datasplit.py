@@ -10,9 +10,11 @@ import numpy as np
 from sklearn.cross_validation import KFold
 from databases import HiddenRatingsDatabase
 from collections import defaultdict
+from bisect import bisect
 
 
 class Split(object):
+
     def __init__(self, train, valid=None, test=None, config=None):
         self.train = train
         self.valid = valid
@@ -67,8 +69,13 @@ class Splitter(object):
                     pkl.dump(split, f)
         return fname_prefix
 
+    def split_save(self, database, filepath):
+        self.split(database)
+        return self.save(filepath)
+
 
 class CVTestRatingSplitter(Splitter):
+
     def __init__(self, nfolds=5, per_user=True, pct_hidden=0.2, threshold=0):
         self.nfolds = nfolds
         self.per_user = per_user
@@ -89,12 +96,57 @@ class CVTestRatingSplitter(Splitter):
         self.suffix = '_CV' + self.CV_splitter.suffix \
             + '_test' + self.Test_splitter.suffix
 
+
+    def split_save(self, database, filepath):
+        self.Test_splitter.split(database)
+        self.test = self.Test_splitter.test
+        train_valid = self.Test_splitter.train
+
+        if self.nfolds > 1:
+            if self.per_user:
+                for u in range(database.n_users()):
+                    item_ratings = database.get_rating_list(u)
+                    size = len(item_ratings)
+                    splits = list(KFold(size, n_folds=self.nfolds, shuffle=True))
+                    #splits are in format [...,(train_i,test_i),...]
+                    for i in range(self.nfolds):
+                        for idx in splits[i][1]:
+                            self.CV_splitter.hidden_coord[i].append((u, item_ratings[idx][0]))
+            else:
+                raise NotImplementedError()
+
+            fname_prefix = filepath + self.suffix
+            for fold in range(self.nfolds):
+                split = self.CV_splitter.hidden_coord[fold]
+                train = HiddenRatingsDatabase(database.get_matrix(sparse=True), split)
+                valid = defaultdict(list)
+                for u, i in split:
+                    r = database.get_rating(u, i)
+                    valid[u].append((i, r))
+
+                config = self.CV_splitter.config.copy()
+                config['fold'] = fold
+                split = Split(train, valid, self.test, config)
+                fname = fname_prefix + '_split_%d.pkl' % fold
+                with open(fname, 'wb') as f:
+                    pkl.dump(split, f)
+
+            return fname_prefix
+
+        else:
+            self.CV_splitter.split(train_valid)
+            self.train = self.CV_splitter.train
+            self.valid = self.CV_splitter.test
+            return self.save(filepath)
+
+
     def split(self, database):
         self.Test_splitter.split(database)
         self.CV_splitter.split(self.Test_splitter.train)
         self.train = self.CV_splitter.train
         self.valid = self.CV_splitter.test
         self.test = self.Test_splitter.test
+
 
     def save(self, filepath):
         fname_prefix = filepath + self.suffix
@@ -136,14 +188,14 @@ class kFoldRatingSplitter(Splitter):
             raise NotImplementedError()
 
         self.train = \
-            [HiddenRatingsDatabase(database.get_matrix(), split)
+            [HiddenRatingsDatabase(database.get_matrix(sparse=True), split)
              for split in self.hidden_coord]
 
         self.test = []
         for split in self.hidden_coord:
             users = defaultdict(list)
             for u, i in split:
-                r = database.get_matrix()[u, i]
+                r = database.get_rating(u, i)
                 users[u].append((i, r))
             self.test.append(users)
 
@@ -163,6 +215,8 @@ class HoldoutRatingSplitter(Splitter):
         self.test = None
 
     def _get_hidden(self, matrix):
+        raise NotImplementedError()
+        # TODO should not use randoint as it may return repeated indices
         # get positions equal to or above threshold (ratings)
         row, col = np.where(matrix > self.threshold)
         # len(row)== total number of ratings>=threshold
@@ -170,35 +224,56 @@ class HoldoutRatingSplitter(Splitter):
         if n_hidden > 0:
             # pick n_hidden random positions
             hidden_idx = np.random.randint(0, len(row), n_hidden)
+            good = (row[hidden_idx].tolist(), col[hidden_idx].tolist())
         else:
-            hidden_idx = np.array([], dtype=int)
+            good = ([], [])
+
         # get positions equal to or above threshold (ratings)
         row, col = np.where(matrix <= self.threshold)
         # len(row)== total number of ratings>=threshold
         n_hidden = np.ceil(self.pct_hidden*len(row))
         if n_hidden > 0:
             # pick n_hidden random positions
-            hidden_idx = np.hstack((hidden_idx,
-                                    np.random.randint(0, len(row), n_hidden)))
+            hidden_idx =  np.random.randint(0, len(row), n_hidden)
+            bad = (row[hidden_idx].tolist(), col[hidden_idx].tolist())
+        else:
+            bad = ([],[])
 
-        return (row[hidden_idx], col[hidden_idx])
+        hidden = tuple([g+b for g,b in zip(good, bad)])
+        return hidden
 
     def split(self, database):
-        matrix = np.array(database.get_matrix())
         if self.per_user:
-            for u, user_vector in enumerate(matrix):
-                rows, cols = self._get_hidden(np.array(user_vector, ndmin=2))
+            for u in range(database.n_users()):
+                user_ratings = database.get_rating_list(u)  # is sorted
+                ratings = [r for i, r in user_ratings]
+                n_good = idx = bisect(ratings, self.threshold)
+                n_hidden = int(np.ceil(self.pct_hidden*n_good))
+                # get good
+                if n_hidden > 0:
+                    hidden = np.random.choice(n_good, n_hidden,
+                                              replace=False).tolist()
+                else:
+                    hidden = []
+                # get bad
+                n_bad = len(user_ratings)-n_good
+                n_hidden = int(np.ceil(self.pct_hidden*n_bad))
+                if n_hidden > 0:
+                    hidden += (idx+np.random.choice(n_bad, n_hidden,
+                                                    replace=False)).tolist()
+                hidden = set(hidden)
                 self.hidden_coord += \
-                    list(zip([u for _ in range(len(rows))], cols))
+                    [(u, i) for i, r in user_ratings if i in hidden]
         else:
-            rows, cols = self._get_hidden(matrix)
+            raise NotImplementedError()
+            rows, cols = self._get_hidden(database.get_matrix())
             self.hidden_coord = list(zip(rows, cols))
 
         self.train = \
-            HiddenRatingsDatabase(database.get_matrix(), self.hidden_coord)
+            HiddenRatingsDatabase(database.get_matrix(sparse=True), self.hidden_coord)
 
         self.test = defaultdict(list)
         for u, i in self.hidden_coord:
-            r = database.get_matrix()[u, i]
+            r = database.get_rating(u, i)
             self.test[u].append((i, r))
 

@@ -174,12 +174,18 @@ def run_exp(args, conf, exp_db):
                                            pct_hidden=conf.pct_hidden,
                                            per_user=conf.per_user,
                                            threshold=conf.threshold)
-        splitter.split(database)
         split_folder = data.get_db_path(conf.database) \
             + get_timestamp() + '/'
         if not os.path.isdir(split_folder):
             os.makedirs(split_folder, mode=0o775, exist_ok=True)
-        split_fname_prefix = splitter.save(split_folder)
+        split_fname_prefix = splitter.split_save(database, split_folder)
+        # Save split fname prefix on this experiment's entry
+        for fold in range(conf.nfolds):
+            exp_db.set_fold_arg_val(EXP_ID, fold,
+                                    'split_fname_prefix', split_fname_prefix)
+
+    if args.action == 'split':
+        exit()
 
     '''
     Run experiment
@@ -196,8 +202,6 @@ def run_exp(args, conf, exp_db):
     return RS_list
 
 def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix):
-    # Save split fname prefix on this experiment's entry
-    exp_db.set_arg_val(EXP_ID, 'split_fname_prefix', split_fname_prefix)
     FOLD_PREFIX =  'fold_%d' % fold
     FOLD_PATH = RESULT_FOLDER + FOLD_PREFIX
     if conf.nfolds == 1:
