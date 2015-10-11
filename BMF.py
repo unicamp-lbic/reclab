@@ -116,7 +116,7 @@ def factors2matrices(factor_set, shape):
             P[row, k] = 1
         for col in concept.intent:
             Q[col, k] = 1
-    return P.toarray(), Q.toarray()
+    return P.tocsr(), Q.tocsr()
 
 def bool_dot(m1, m2):
     m1 = m1 > 0

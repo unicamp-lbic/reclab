@@ -76,7 +76,8 @@ class DummyRecommender(RatingPredictor):
 
     def fit(self, database):
         self.database = database
-        matrix, user_means = self.database.get_matrix(zero_mean=True)
+        matrix, user_means = self.database.get_matrix(zero_mean=True,
+                                                      sparse=True)
         self.user_means = user_means
 
     def predict(self, target_user, target_item):
@@ -84,12 +85,12 @@ class DummyRecommender(RatingPredictor):
 
 
 class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
-    def __init__(self, n_neighbors=10, algorithm='brute',
+    def __init__(self, n_neighbors=10, algorithm='brute', model_size=30,
                  metric='cosine', offline_kNN=True, weighting='none',
                  **kNN_args):
         self.database = None
         self.n_neighbors = n_neighbors
-        self.model_size = 30 * n_neighbors
+        self.model_size = model_size * n_neighbors
         self.weighting = weighting
         self.metric = 'cosine'
         self.offline_kNN = offline_kNN
@@ -99,7 +100,8 @@ class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
     def fit(self, database):
         self.database = database
         if self.offline_kNN:
-            matrix, user_means = self.database.get_matrix(zero_mean=True)
+            matrix, user_means = self.database.get_matrix(zero_mean=True,
+                                                          sparse=True)
             self.kNN.fit(matrix.T, keepgraph=True)
         return self
 
@@ -145,7 +147,8 @@ class UserBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
     def fit(self, database):
         self.database = database
         if self.offline_kNN:
-            matrix, user_means = database.get_matrix(zero_mean=True)
+            matrix, user_means = database.get_matrix(zero_mean=True,
+                                                     sparse=True)
             self.kNN.estimator.n_neighbors = matrix.shape[1]
             self.kNN.fit(matrix, keepgraph=True)
         return self

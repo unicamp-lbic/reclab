@@ -2,7 +2,7 @@
 
 import numpy as np
 from numpy.random import random_integers
-import scipy.sparse as sparse
+import scipy.sparse as sp
 import pandas as pd
 
 
@@ -43,9 +43,9 @@ def read_ml100k_matrix():
     # remember user and item are 1-indexed in original file
     i = np.array(i)-1
     j = np.array(j)-1
-    matrix = sparse.coo_matrix((data,(i, j)),
+    matrix = sp.coo_matrix((data,(i, j)),
                                shape=(qtty['users'], qtty['items']))
-    return matrix.toarray()
+    return matrix.tocsr()
 
 def read_delicious():
     nusers =  1867
@@ -78,9 +78,9 @@ def read_delicious():
     row = np.array([u for u, i in data])
     col = np.array([i for u, i in data])
     data = np.array([1 for u, i in data])
-    matrix = sparse.coo_matrix((data, (row, col)),
+    matrix = sp.coo_matrix((data, (row, col)),
                         shape=(nusers, nitems))
-    return matrix
+    return matrix.tocsr()
 
 def gen_testDB():
     return TestDB(200, 100, min_items=0.2)
@@ -111,19 +111,24 @@ def get_db_path(dbname):
         raise KeyError('Database %s does not exist' % dbname)
     return DB_PATHS[dbname]
 
-def TestDB(nusers, nitems, min_items=0.02, binary=False):
-    min_items = np.ceil(min_items*nitems)
-    matrix = np.zeros((nusers, nitems))
+def TestDB(nusers, nitems, min_items=0.02, binary=False, sparse=True):
+    if sparse == True:
+        delta = lambda : random_integers(0, np.ceil(min_items*nitems))/nitems
+        mat = [sp.rand(1, nitems, density=min_items+delta(),format='csr')] * nusers
+        matrix = sp.vstack(mat)
 
-    for i in range(nusers):
-        extra = random_integers(0, min_items)
-        total_items = max(min_items, min_items + extra)
-        idx = random_integers(0, nitems-1, total_items)
-        matrix[i, idx] = 1.0
+    else:
+        min_items = np.ceil(min_items*nitems)
+        matrix = np.zeros((nusers, nitems))
+        for i in range(nusers):
+            extra = random_integers(0, min_items)
+            total_items = max(min_items, min_items + extra)
+            idx = random_integers(0, nitems-1, total_items)
+            matrix[i, idx] = 1.0
 
-    if not binary:
-        matrix = np.multiply(matrix,
-                             random_integers(1, 5, size=(nusers, nitems)))
-        for i in range(0, nusers, 2):
-            matrix[i+1, :] = np.ceil((matrix[i, :] + matrix[i+1, :]) / 2.0)
+        if not binary:
+            matrix = np.multiply(matrix,
+                                 random_integers(1, 5, size=(nusers, nitems)))
+            for i in range(0, nusers, 2):
+                matrix[i+1, :] = np.ceil((matrix[i, :] + matrix[i+1, :]) / 2.0)
     return matrix
