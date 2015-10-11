@@ -15,7 +15,7 @@ class kNN(object):
         self.graph = None
         if not algorithm == 'LSH':
             self.estimator = \
-                NearestNeighbors(**kNN_args)
+                NearestNeighbors(algorithm=algorithm, metric=metric, **kNN_args)
         elif algorithm == 'LSH':
             kNN_args['n_candidates'] = \
                 kNN_args['n_candidates']*kNN_args['n_neighbors']
