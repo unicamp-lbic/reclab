@@ -58,10 +58,16 @@ class MatrixDatabase(BaseDatabase):
             matrix = matrix.tocsr()
 
         self.matrix = matrix
+        self.matrix_csc = None
+        self.matrix_dok = None
 
         self.thresholded = None
+        self.thresholded_csc = None
 
         self.zero_mean_matrix = None
+        self.zero_mean_matrix_csc = None
+        self.zero_mean_matrix_dok = None
+
         self.user_means = None
 
     def _compute_zero_mean(self):
@@ -113,11 +119,21 @@ class MatrixDatabase(BaseDatabase):
         if zero_mean:
             if self.zero_mean_matrix is None:
                 self._compute_zero_mean()
-            return self.zero_mean_matrix[user_id, item_id]
+            if sp.issparse(self.matrix):
+                if self.zero_mean_matrix_dok is None:
+                    self.zero_mean_matrix_dok = self.zero_mean_matrix.todok()
+                return self.zero_mean_matrix_dok[user_id, item_id]
+            else:
+                return self.zero_mean_matrix[user_id, item_id]
         else:
-            return BaseDatabase.get_rating(self, user_id, item_id)
+            if sp.issparse(self.matrix):
+                if self.matrix_dok is None:
+                    self.matrix_dok = self.matrix.todok()
+                return self.matrix_dok[user_id, item_id]
+            else:
+                return BaseDatabase.get_rating(self, user_id, item_id)
 
-    def get_user_vector(self, user_id, zero_mean=False):
+    def get_user_vector(self, user_id, zero_mean=False, sparse=False):
         if zero_mean:
             if self.zero_mean_matrix is None:
                 self._compute_zero_mean()
@@ -126,7 +142,7 @@ class MatrixDatabase(BaseDatabase):
         else:
             vector = BaseDatabase.get_user_vector(self, user_id)
 
-        if sp.issparse(self.matrix):
+        if sp.issparse(self.matrix) and not sparse:
             return oneD(vector.toarray())
         else:
             return vector
@@ -142,17 +158,27 @@ class MatrixDatabase(BaseDatabase):
         alist.sort()
         return [(i, r) for r, i in alist]
 
-    def get_item_vector(self, item_id, zero_mean=False):
+    def get_item_vector(self, item_id, zero_mean=False, sparse=False):
         if zero_mean:
             if self.zero_mean_matrix is None:
                 self._compute_zero_mean()
             if sp.issparse(self.matrix):
-                return oneD(self.zero_mean_matrix.tocsc()[:, item_id].toarray())
+                if self.zero_mean_matrix_csc is None:
+                    self.zero_mean_matrix_csc = self.zero_mean_matrix.tocsc()
+                if sparse:
+                    self.zero_mean_matrix_csc[:, item_id]
+                else:
+                    return oneD(self.zero_mean_matrix_csc[:, item_id].toarray())
             else:
                 return self.zero_mean_matrix[:, item_id]
         else:
             if sp.issparse(self.matrix):
-                return oneD(self.matrix.tocsc()[:, item_id].toarray())
+                if self.matrix_csc is None:
+                    self.matrix_csc = self.matrix.tocsc()
+                if sparse:
+                    return self.matrix_csc[:, item_id]
+                else:
+                    return oneD(self.matrix_csc[:, item_id].toarray())
             else:
                 return BaseDatabase.get_item_vector(self, item_id)
 
@@ -177,7 +203,9 @@ class MatrixDatabase(BaseDatabase):
     def get_rated_users(self, item_id):
         "return users who did not rate item_id user"
         if sp.issparse(self.matrix):
-            return self.matrix.tocsc()[:, item_id].indices.tolist()
+            if self.matrix_csc is None:
+                self.matrix_csc = self.matrix.tocsc()
+            return self.matrix_csc[:, item_id].indices.tolist()
         else:
             return [idx for idx, rating in enumerate(self.matrix[:, item_id])
                     if rating > 0]

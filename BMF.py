@@ -5,7 +5,7 @@ Created on Mon Apr  6 16:34:16 2015
 @author: thalita
 """
 import numpy as np
-from scipy import sparse
+import scipy.sparse as sp
 import time
 
 
@@ -37,12 +37,15 @@ class BMF(object):
         else:
             factors = bmf(matrix, self.min_coverage)
             self.P, self.Q = factors2matrices(factors, (nrow, ncol))
-        return self.P, self.Q
+        if sp.issparse(matrix):
+            return self.P, self.Q
+        else:
+            return self.P.toarray(), self.Q.toarray()
 
 def bmf(matrix, min_coverage=1.0):
     n, m = matrix.shape
-    if sparse.issparse(matrix):
-        remaining_pairs = sparse.lil_matrix(matrix)
+    if sp.issparse(matrix):
+        remaining_pairs = sp.lil_matrix(matrix)
     else:
         remaining_pairs = matrix.copy()
 
@@ -75,7 +78,7 @@ def bmf(matrix, min_coverage=1.0):
                     # Update intent
                     update_intent = np.ones((1,m))
                     for obj in concepts[j].extent:
-                        if sparse.issparse(remaining_pairs):
+                        if sp.issparse(remaining_pairs):
                             update_intent *= remaining_pairs[obj, :].toarray()
                         else:
                             update_intent *= remaining_pairs[obj, :]
@@ -109,8 +112,8 @@ def bmf(matrix, min_coverage=1.0):
 def factors2matrices(factor_set, shape):
     n, m = shape
     d = len(factor_set)
-    P = sparse.lil_matrix((n, d))
-    Q = sparse.lil_matrix((m, d))
+    P = sp.lil_matrix((n, d))
+    Q = sp.lil_matrix((m, d))
     for k, concept in enumerate(factor_set):
         for row in concept.extent:
             P[row, k] = 1
@@ -143,7 +146,7 @@ def _test():
     assert((M == matrix).all())
 
     t0 = time.time()
-    sparse_mat = sparse.lil_matrix(matrix)
+    sparse_mat = sp.lil_matrix(matrix)
     factors = bmf(sparse_mat)
     P, Q = factors2matrices(factors, matrix.shape)
     print('time:', time.time()-t0)
@@ -167,7 +170,7 @@ def _large_test():
     print(P.shape)
 
     t0 = time.time()
-    sparse_mat = sparse.lil_matrix(matrix)
+    sparse_mat = sp.lil_matrix(matrix)
     factors = bmf(sparse_mat)
     P, Q = factors2matrices(factors, matrix.shape)
     print('time:', time.time()-t0)

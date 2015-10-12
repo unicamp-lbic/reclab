@@ -7,10 +7,26 @@ Created on Mon Apr 27 12:07:20 2015
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from time import time
 
 
 def oneD(array):
     return np.array(np.array(array).squeeze(), ndmin=1)
+
+
+class timing(object):
+    def __init__(self):
+        self.t0 = 0
+        self.tic()
+    def tic(self):
+        self.t0 = time()
+    def toc(self, text=''):
+        if text != '':
+            text == ' '
+        dt = time()-self.t0
+        print(text, 'Time elapsed:',dt,' s')
+        self.tic()
+        return dt
 
 
 def read_result(fname, path='', meanstd=True):

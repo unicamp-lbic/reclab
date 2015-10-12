@@ -45,7 +45,7 @@ def read_ml100k_matrix():
     j = np.array(j)-1
     matrix = sp.coo_matrix((data,(i, j)),
                                shape=(qtty['users'], qtty['items']))
-    return matrix.tocsr()
+    return matrix
 
 def read_delicious():
     nusers =  1867
@@ -111,11 +111,11 @@ def get_db_path(dbname):
         raise KeyError('Database %s does not exist' % dbname)
     return DB_PATHS[dbname]
 
-def TestDB(nusers, nitems, min_items=0.02, binary=False, sparse=True):
+def TestDB(nusers, nitems, min_items=0.02, binary=False, sparse=False):
     if sparse == True:
         delta = lambda : random_integers(0, np.ceil(min_items*nitems))/nitems
         mat = [sp.rand(1, nitems, density=min_items+delta(),format='csr')] * nusers
-        matrix = sp.vstack(mat)
+        matrix = sp.vstack(mat).tocsr()
 
     else:
         min_items = np.ceil(min_items*nitems)
