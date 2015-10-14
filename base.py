@@ -143,25 +143,19 @@ class SavedRecommendations(RatingPredictor):
             # ask for recommendations w/ threshold=0
             # to get all the predratings
             lists[user] = RS.recommend(user, threshold=0)
-        with open(filepath, 'wb') as f:
             config = {'n_users': RS.database.n_users(),
                       'n_items': RS.database.n_items()}
+        with open(filepath, 'wb') as f:
             pkl.dump((lists, config), f)
 
     def load(self, filepath):
         with open(filepath, 'rb') as f:
             self.lists, self.config = pkl.load(f)
-        data = []
-        rows = []
-        cols = []
+        shape = (self.config['n_users'], self.config['n_items'])
+        self.pred_ratings = np.zeros(shape=shape)
         for user in self.lists:
             for item, rating in self.lists[user]:
-                rows.append(user)
-                cols.append(item)
-                data.append(rating)
-        shape = (self.config['n_users'], self.config['n_items'])
-        self.pred_ratings = sparse.coo_matrix((data, (rows, cols)),
-                                              shape=shape).todok()
+                self.pred_ratings[user, item] = rating
 
     def predict(self, target_user, target_item):
         return self.pred_ratings[target_user, target_item]
@@ -201,3 +195,4 @@ class BaseEnsemble(BaseRecommender):
         "learn recommender model (neighborhood, matrix factorization, etc)"
         self.database = database
         return self
+
