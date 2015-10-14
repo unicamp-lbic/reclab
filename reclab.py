@@ -77,6 +77,15 @@ def main():
         raise KeyError('Invalid configuration setting')
 
     '''
+    Try to load ensemble config if applicable
+    '''
+    if args.ensemble is not None:
+        try:
+            ensemble_conf = config.valid_ensemble_configs[args.ensemble]
+        except KeyError:
+            raise KeyError('Invalid ensemble configuration setting')
+
+    '''
     Check for --setpar
     '''
     if args.setpar is not None:
@@ -99,6 +108,7 @@ def main():
                     if par in conf.RS_args:
                         conf.RS_args[par] = value
                     else:
+                        # TODO check if it is an ensemble param
                         raise ValueError('Invalid config param')
             else:
                 raise ValueError('Must use --setpar parname=value')
@@ -114,11 +124,6 @@ def main():
     will need --config, --sweep, --values, --ensemble
     '''
     if args.ensemble is not None:
-        try:
-            ensemble_conf = config.valid_ensemble_configs[args.ensemble]
-        except KeyError:
-            raise KeyError('Invalid ensemble configuration setting')
-
         run_ensemble(args, conf, ensemble_conf, exp_db)
     elif args.sweep is not None:
         '''
@@ -130,6 +135,8 @@ def main():
 
 
 def run_sweep(args, conf, exp_db):
+    # TODO treat sweep as setpar: -sweep parname=parval1,parval2 etc.
+    # TODO allow for multiple sweeps (create a grid of configs)
     values = args.values.split(',')
     try:
         values = [int(x) for x in values]
@@ -212,7 +219,10 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
 
     RS = conf.RS_type(**conf.RS_args)
     if args.ensemble is not None:
-        evalu.load_model(RS, FOLD_PATH, split)
+        if args.action == 'train':
+            evalu.load_model(RS, FOLD_PATH, split)
+        elif args.action == 'test' or args.action == 'metrics':
+            RS = evalu.load_recommendations(FOLD_PATH)
         return RS
 
     if args.action == 'train':
@@ -282,12 +292,12 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
     '''
     params = conf.as_dict()
     params.update(ensemble_conf.as_dict())
-    params[args.sweep] = 'sweep'
-    params['sweep'] = args.sweep
-    params['sweep_values'] = values
+    params[args.sweep] = 'varpar'
+    params['varpar'] = args.sweep
+    params['varpar_values'] = values
     EXP_ID = exp_db.get_id_dict(params)
     if EXP_ID is None:
-        EXP_ID = time.strftime('%Y%m%d%H%M%S')
+        EXP_ID = get_timestamp()
         exp_db.add_experiment_dict(EXP_ID, params)
 
     RESULT_FOLDER = './results/' + EXP_ID + '/'
@@ -335,6 +345,9 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
             metrics.list_metrics(conf.threshold)
             for arg, val in metrics.metrics.items():
                 exp_db.set_fold_arg_val(EXP_ID, fold, arg, val)
+        else:
+            raise ValueError('Invalid action')
+
 
 def get_timestamp():
     dt = datetime.now()
