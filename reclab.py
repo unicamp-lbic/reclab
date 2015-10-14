@@ -9,6 +9,7 @@ Created on Tue Sep 15 16:54:46 2015
 import argparse
 import time
 from datetime import datetime
+import numpy as np
 import config
 import os
 import evaluation as evalu
@@ -110,7 +111,7 @@ def main():
 
     '''
     Check for ensemble action
-    will need --config, --sweep, --values, --ensemble_config
+    will need --config, --sweep, --values, --ensemble
     '''
     if args.ensemble is not None:
         try:
@@ -209,11 +210,11 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
     else:
         split = evalu.load_split(split_fname_prefix, fold)
 
+    RS = conf.RS_type(**conf.RS_args)
     if args.ensemble is not None:
-        RS = evalu.load_recommendations(FOLD_PATH)
+        evalu.load_model(RS, FOLD_PATH, split)
         return RS
 
-    RS = conf.RS_type(**conf.RS_args)
     if args.action == 'train':
         # Gen/Load MF if applicable
         if conf.is_MF:
@@ -242,7 +243,7 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
         exp_db.set_fold_arg_val(EXP_ID, fold, 'test_time', tst_dt)
 
     elif args.action == 'metrics':
-        metrics = evalu.Metrics(split, FOLD_PATH)
+        metrics = evalu.Metrics(split, filepath=FOLD_PATH)
         metrics.def_test_set(args.set)
         metrics.error_metrics()
         metrics.list_metrics(conf.threshold)
@@ -259,10 +260,10 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
 def run_ensemble(args, conf, ensemble_conf, exp_db):
     values = args.values.split(',')
     try:
-        values = [int(x) for x in values]
+        values = tuple([int(x) for x in values])
     except ValueError:
         try:
-            values = [float(x) for x in values]
+            values = tuple([float(x) for x in values])
         except ValueError:
             pass
     RS_list = []
@@ -279,13 +280,15 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
     '''
     Create expID for ensemble exp
     '''
-    params = conf.asdict()
+    params = conf.as_dict()
     params.update(ensemble_conf.as_dict())
-    params[args.sweep] = values
+    params[args.sweep] = 'sweep'
+    params['sweep'] = args.sweep
+    params['sweep_values'] = values
     EXP_ID = exp_db.get_id_dict(params)
     if EXP_ID is None:
         EXP_ID = time.strftime('%Y%m%d%H%M%S')
-        exp_db.add_experiment(EXP_ID, params)
+        exp_db.add_experiment_dict(EXP_ID, params)
 
     RESULT_FOLDER = './results/' + EXP_ID + '/'
     if not os.path.isdir(RESULT_FOLDER):
@@ -299,7 +302,7 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
         exp_db.get_arg_val(single_exp_id, 'split_fname_prefix', conf)
 
     for fold in range(conf.nfolds):
-        ens = ensemble_conf.RS_type(**ensemble_conf.RS_args)
+        ens = ensemble_conf.Ens_type(**ensemble_conf.Ens_args)
         exp_db.set_arg_val(EXP_ID, 'split_fname_prefix', split_fname_prefix)
         FOLD_PREFIX =  'fold_%d' % fold
         FOLD_PATH = RESULT_FOLDER + FOLD_PREFIX
@@ -326,7 +329,7 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
             exp_db.set_fold_arg_val(EXP_ID, fold, 'test_time', tst_dt)
 
         elif args.action == 'metrics':
-            metrics = evalu.Metrics(split, FOLD_PATH)
+            metrics = evalu.Metrics(split, filepath=FOLD_PATH)
             metrics.def_test_set(args.set)
             metrics.error_metrics()
             metrics.list_metrics(conf.threshold)

@@ -6,12 +6,27 @@ Created on Tue Sep 15 16:54:28 2015
 
 Config file
 """
+import abc
 from collections import defaultdict
 import recommender as rec
+import ensemble as ens
 import pandas as pd
 import data
 
-class Config(object):
+
+class BaseConfig(object):
+    __metaclass__ = abc.ABCMeta
+    def as_dict(self):
+        d = self.__dict__.copy()
+        keys = list(d.keys())
+        for key in keys:
+            if d[key] is None:
+                del d[key]
+
+
+        return d
+
+class Config(BaseConfig):
     def __init__(self, database, RS_type, RS_args,
                  nfolds, pct_hidden, threshold,
                  per_user=True, is_MF=False):
@@ -28,15 +43,22 @@ class Config(object):
             self.MF_args = RS_type.__MF_args__(RS_args)
 
     def as_dict(self):
-        d = self.__dict__.copy()
-        keys = list(d.keys())
-        for key in keys:
-            if d[key] is None:
-                del d[key]
-
+        d = BaseConfig.as_dict(self)
         del d['RS_args']
         d['RS_type'] = d['RS_type'].__name__
         d.update(self.RS_args)
+        return d
+
+class EnsembleConfig(BaseConfig):
+    def __init__(self, Ens_type, Ens_args):
+        self.Ens_type = Ens_type
+        self.Ens_args = Ens_args
+
+    def as_dict(self):
+        d = BaseConfig.as_dict(self)
+        del d['Ens_args']
+        d['Ens_type'] = d['Ens_type'].__name__
+        d.update(self.Ens_args)
         return d
 
 dummy5fold = Config(
@@ -136,6 +158,17 @@ BMFRP5fold = Config(
     pct_hidden=0.2
 )
 
+WAvg = EnsembleConfig(
+    Ens_type=ens.WAvgRatingEnsemble,
+    Ens_args={}
+)
+
+LinReg = EnsembleConfig(
+    Ens_type=ens.LinRegRatingEnsemble,
+    Ens_args={'regularization': 1.0,
+              'l1_ratio': 0.5  }
+)
+
 '''
 Dictionary of valid configuration settings
 '''
@@ -146,4 +179,9 @@ valid_configs = {
     'IB5fold': IB5fold,
     'dummy5fold': dummy5fold,
     'UB5fold': UB5fold
+}
+
+valid_ensemble_configs = {
+    'WAvg': WAvg,
+    'LinReg': LinReg
 }

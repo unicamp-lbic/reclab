@@ -55,12 +55,13 @@ def ensemble_train_save(ens, out_filepath, split):
     ens.fit(split)
     ens.save(out_filepath+TRAIN_SUFFIX)
 
-
 def ensemble_test_save(ens, out_filepath, split):
-    ens.load(out_filepath+TRAIN_SUFFIX, split)
+    ens.load(out_filepath+TRAIN_SUFFIX, split.train)
     rec = SavedRecommendations()
     rec.save(out_filepath+TEST_SUFFIX, ens)
 
+def load_model(RS, out_filepath, split):
+    RS.load(out_filepath+TRAIN_SUFFIX, split.train)
 
 def load_recommendations(filepath):
     rec = SavedRecommendations()
@@ -69,9 +70,15 @@ def load_recommendations(filepath):
 
 
 class Metrics(object):
-    def __init__(self, split, filepath):
+    def __init__(self, split, filepath=None, RS=None):
         self.RS = SavedRecommendations()
-        self.RS.load(filepath+TEST_SUFFIX)
+        if RS is not None:
+            self.RS = RS
+        elif filepath is not None:
+            self.RS.load(filepath+TEST_SUFFIX)
+        else:
+            raise ValueError('Must inform either path to recommender\
+            or a recommender object')
         self.split = split
         self.test_set = None
         self.which = None

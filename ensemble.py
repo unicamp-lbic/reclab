@@ -5,11 +5,16 @@ Created on Wed Apr 29 12:21:08 2015
 @author: thalita
 """
 import abc
+import numpy as np
 from collections import Counter
 from base import BaseEnsemble, RatingPredictor
 from scipy.stats import kendalltau
+from sklearn.preprocessing.data import normalize
+from sklearn.linear_model import ElasticNet
 from recommender import BMFRPrecommender
-import numpy as np
+from databases import HiddenRatingsDatabase
+import evaluation as evalu
+from utils import oneD
 
 
 class RatingEnsemble(BaseEnsemble, RatingPredictor):
@@ -83,15 +88,50 @@ class AvgRatingEnsemble(RatingEnsemble):
 class WAvgRatingEnsemble(RatingEnsemble):
     def __init__(self, **varargs):
         self.RS_list = []
-        for arg, val in varargs.items():
-            self.__setattr__(arg, val)
+        self.weights = []
 
     def _rating_ensemble_strategy(self, ratings):
-        return np.mean(ratings)
+        ratings = np.array(ratings)
+        return np.dot(self.weights, ratings)
 
-    def fit(split):
+    def fit(self, split):
         self.database = split.train
+        self.weights = []
+        for RS in self.RS_list:
+            metrics = evalu.Metrics(split, RS=RS)
+            metrics.def_test_set('valid')
+            metrics.error_metrics()
+            self.weights.append(1/metrics.metrics['RMSE_valid'])
+        self.weights = oneD(normalize(np.array(self.weights), norm='l1'))
 
+class LinRegRatingEnsemble(RatingEnsemble):
+    def __init__(self, regularization=1.0, l1_ratio=0.5):
+        self.RS_list = []
+        self.regularization = regularization
+        self.l1_ratio = l1_ratio
+        '''
+        Elastic net performs a regularized linear regression
+        It has both l1 and l2 penalties:
+        alpha * [ (l1_ratio) * l1_penalty + (1-l1_ratio) * l2_penalty]
+        '''
+        self.model = ElasticNet(alpha=regularization,
+                                l1_ratio=l1_ratio)
+    def fit(self, split):
+        self.database = split.train
+        X = []
+        Y = []
+        for user, u_valid in split.valid.items():
+            for item, rating in u_valid:
+              Y.append(rating)
+              predictions = [RS.predict(user, item) for RS in self.RS_list]
+              X.append(predictions)
+        X = np.array(X)
+        Y = np.array(Y)
+        self.model.fit(X,Y)
+
+    def _rating_ensemble_strategy(self, ratings):
+        ratings = np.array(ratings, ndmin=2)
+        return float(self.model.predict(ratings))
 
 def RPBMFEnsembleFactory(RP_type='sparse', n_projections=5,
                          dim_range=(0.25, 0.75), **BMF_args):
