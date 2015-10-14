@@ -11,8 +11,8 @@ from time import time
 
 
 def oneD(array):
+    # TODO problably the ndarray.flatten method can do this
     return np.array(np.array(array).squeeze(), ndmin=1)
-
 
 class timing(object):
     def __init__(self):
