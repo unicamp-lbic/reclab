@@ -70,6 +70,19 @@ def load_recommendations(filepath):
 
 
 class Metrics(object):
+    __atN__ = [1, 5, 10, 15, 20]
+    def ir_metrics_names(which, atNs=None):
+        if atNs is None:
+            atNs = __atN__
+        metrics = ['P@%d_' % atN + which for atN in atNs]
+        metrics += ['R@%d_' % atN + which for atN in atNs]
+        metrics += ['F1@%d_' % atN + which for atN in atNs]
+        return metrics
+
+    def error_metrics_names(which, user=False):
+        return ['RMSE'+('u' if user else '') + which,
+                'MAE'+('u' if user else '') + which]
+
     def __init__(self, split, filepath=None, RS=None):
         self.RS = SavedRecommendations()
         if RS is not None:
@@ -123,7 +136,7 @@ class Metrics(object):
         n_users = len(self.test_set)
         for user_id in self.test_set:
             rlist = self._rlist_single_user(user_id, threshold)
-            for atN in [1, 5, 10, 15, 20]:
+            for atN in __atN__:
                 hits = self._hits_atN(user_id, rlist, atN, threshold)
                 r = hits/len(self.test_set[user_id])
                 p = hits/atN

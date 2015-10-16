@@ -27,13 +27,14 @@ def main():
     parser = argparse.ArgumentParser(description='Run recommender training/evaluation')
     parser.add_argument('action', help='train, test, metrics, clear_db, \
     clear_exp --id EXP_ID, clear_conf -c CONFIG, show_db')
-    parser.add_argument('-c', '--config',
+    parser.add_argument('-c', '--config', action='append',
                         help='Configuration setting for this run \
     (see valid_configs in config.py)')
     parser.add_argument('--id',
                         help='experiment id to erase (user with clear exp)')
-    parser.add_argument('-s','--sweep', help='do param sweep')
-    parser.add_argument('-v','--values', help='values for param sweep')
+    parser.add_argument('-s','--sweep', action='append',
+                        help='--sweep param=val1,val2,val3 do param sweep')
+
     parser.add_argument('--folds',
                         help='specific folds to perform action on, comma-separated')
     parser.add_argument('--setpar', action='append', help='--setpar parname=value')
@@ -72,7 +73,7 @@ def main():
     Try to load configuration settings
     '''
     try:
-        conf = config.valid_configs[args.config]
+        conf = config.valid_configs[args.config[0]]
     except KeyError:
         raise KeyError('Invalid configuration setting')
 
@@ -95,21 +96,10 @@ def main():
             par, value = tuple(par_val.split('='))
             if value is not None:
                 try:
-                    value = int(value)
-                except ValueError:
-                    try:
-                        value = float(value)
-                    except ValueError:
-                        pass
-                try:
-                    conf.__getattribute__(par)
-                    conf.__setattr__(par, value)
+                    conf.set_par(par, value)
                 except AttributeError:
-                    if par in conf.RS_args:
-                        conf.RS_args[par] = value
-                    else:
-                        # TODO check if it is an ensemble param
-                        raise ValueError('Invalid config param')
+                    if args.ensemble is not None:
+                        ensemble_conf.set_par(par, value)
             else:
                 raise ValueError('Must use --setpar parname=value')
     '''
@@ -121,7 +111,7 @@ def main():
 
     '''
     Check for ensemble action
-    will need --config, --sweep, --values, --ensemble
+    will need --config, --sweep par_name=par_values, --ensemble
     '''
     if args.ensemble is not None:
         run_ensemble(args, conf, ensemble_conf, exp_db)
@@ -135,24 +125,12 @@ def main():
 
 
 def run_sweep(args, conf, exp_db):
-    # TODO treat sweep as setpar: -sweep parname=parval1,parval2 etc.
-    # TODO allow for multiple sweeps (create a grid of configs)
-    values = args.values.split(',')
-    try:
-        values = [int(x) for x in values]
-    except ValueError:
-        try:
-            values = [float(x) for x in values]
-        except ValueError:
-            pass
-    for v in values:
-        if args.sweep in conf.__dict__:
-            conf.__setattr__(args.sweep, v)
-        elif args.sweep in conf.RS_args:
-            conf.RS_args[args.sweep] = v
-        else:
-            raise ValueError('Parameter not present in specified cofiguration')
-        run_exp(args, conf, exp_db)
+    for arg in args.sweep:
+        sweep = arg.split('=')[0]
+        values = arg.split('=')[1].split(',')
+        for v in values:
+            conf.set_par(sweep, v)
+            run_exp(args, conf, exp_db)
 
 
 def run_exp(args, conf, exp_db):
@@ -268,22 +246,11 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
 
 
 def run_ensemble(args, conf, ensemble_conf, exp_db):
-    values = args.values.split(',')
-    try:
-        values = tuple([int(x) for x in values])
-    except ValueError:
-        try:
-            values = tuple([float(x) for x in values])
-        except ValueError:
-            pass
-    RS_list = []
+    # ensemble will only use one sweep for now
+    sweep = args.sweep[0].split('=')[0]
+    values = args.sweep[0].split('=')[1].split(',')
     for v in values:
-        if args.sweep in conf.__dict__:
-            conf.__setattr__(args.sweep, v)
-        elif args.sweep in conf.RS_args:
-            conf.RS_args[args.sweep] = v
-        else:
-            raise ValueError('Parameter not present in specified cofiguration')
+        conf.set_par(sweep, v)
         RS_folds = run_exp(args, conf, exp_db)
         RS_list.append(RS_folds)
 
@@ -353,6 +320,52 @@ def get_timestamp():
     dt = datetime.now()
     ms = int(int(dt.microsecond)/1e4)
     return dt.strftime('%Y%m%d%H%M%S') + str(ms)
+
+def run_plot(args, exp_db):
+    '''
+    plot will accept multiple configs
+    will need a --type arg
+    for each config it may have one sweep
+    a metric plot will need --xaxis param_name
+    a PR plot only uses configs and sweeps
+    '''
+    for conf_arg, sweep_args in zip(args.config, args.sweep):
+        '''
+        Try to load configuration settings
+        '''
+        try:
+            conf = config.valid_configs[conf_arg]
+        except KeyError:
+            raise KeyError('Invalid configuration setting')
+
+        '''
+        parse sweep params
+        '''
+        sweep = sweep_args.split('=')[0]
+        values = sweep_args.split('=')[1].split(',')
+        for v in values:
+            conf.set_par(sweep, v)
+            plt.figure()
+            if args.type == 'metrics':
+                metric_names = evalu.Metrics.ir_metric_names(args.set, args.atN) + \
+                    evalu.Metrics.error_metric_names(args.set)
+                select = conf.as_dict()
+                del select[args.xaxis]
+                ids = exp_db.get_ids_dict(select)
+                plot_single_metric(df, x_axis, metric, **plotargs)
+
+            elif args.type == 'PR':
+                id_ = exp_db.get_id(conf)
+
+    '''
+    Try to load ensemble config if applicable
+    '''
+    if args.ensemble is not None:
+        try:
+            ensemble_conf = config.valid_ensemble_configs[args.ensemble]
+        except KeyError:
+            raise KeyError('Invalid ensemble configuration setting')
+
 
 if __name__=='__main__':
     main()

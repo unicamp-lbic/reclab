@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
-
+import expdb
 from itertools import chain
 
 matplotlib.rcParams['ps.useafm'] = True
@@ -22,12 +22,9 @@ matplotlib.rcParams['pdf.use14corefonts'] = True
 
 outdir = '/tmp/'
 #%%
-result = []
-for i in range(1,3+1):
-    path = 'results/exp_%d_results/' % i
-    result += read_results(path, meanstd=False)
+exp_db = expdb.ExperimentDB()
+result = exp_db.db
 colors = 'bgrcmyk'
-result = pd.DataFrame.from_dict(result)
 all_metrics = ['P','R','F1','RMSE','MAE']
 ir_metrics = ['P','R','F1']
 trad_metrics = ['RMSE','MAE']

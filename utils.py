@@ -69,39 +69,3 @@ def pd_select(dataframe, select):
         return data
     except KeyError:
         return None
-
-
-def plot_metric(metric, varpar, across, dataframe, select,
-                labelfmt='%s', labelmul=1):
-    data = pd_select(dataframe, select)
-
-    varpar_name, varpar_values = varpar
-    across, across_label = across
-    for value in varpar_values:
-        this_data = data[data[varpar_name] == value]
-        this_data.sort(across, inplace=True)
-        x = this_data[across].values
-        y = this_data[this_data[varpar_name] == value][metric].values
-        if metric == 'F1':
-            y *= 2
-        plt.plot(x, y, marker='+', label=labelfmt % (value*labelmul))
-    plt.legend(loc='best', fontsize='small', framealpha=0.5)
-    plt.title(metric)
-    plt.xlabel(across_label)
-
-
-def plot_metrics(metrics, varpar, across, dataframe, select, labelfmt='%s',
-                 labelmul=1, suptitle=None):
-
-    width = int(np.ceil(np.sqrt(len(metrics))))
-    height = int(np.ceil(len(metrics)/width))
-    plt.figure(figsize=(4*width,3*height))
-    for i, metric in enumerate(metrics):
-        plt.subplot(height, width, i+1)
-        plot_metric(metric, varpar, across, dataframe, select,
-                    labelfmt, labelmul)
-    plt.tight_layout()
-    plt.subplots_adjust(top=0.9)
-    if suptitle is not None:
-        plt.suptitle(suptitle)
-

@@ -22,9 +22,25 @@ class BaseConfig(object):
         for key in keys:
             if d[key] is None:
                 del d[key]
-
-
         return d
+
+    @abc.abstractmethod
+    def _set_internal_args(self, par, value):
+        pass
+
+    def set_par(self, par, value):
+        try:
+            value = int(value)
+        except ValueError:
+            try:
+                value = float(value)
+            except ValueError:
+                pass
+        try:
+            self.__getattribute__(par)
+            self.__setattr__(par, value)
+        except AttributeError:
+            self._set_internal_args(par, value)
 
 class Config(BaseConfig):
     def __init__(self, database, RS_type, RS_args,
@@ -49,6 +65,16 @@ class Config(BaseConfig):
         d.update(self.RS_args)
         return d
 
+    def _set_internal_args(self, par, value):
+        if par in self.RS_args:
+            self.RS_args[par] = value
+            if self.is_MF:
+                self.MF_type = self.RS_type.__MF_type__
+                self.MF_args = self.RS_type.__MF_args__(self.RS_args)
+        else:
+            raise AttributeError('Invalid config param')
+
+
 class EnsembleConfig(BaseConfig):
     def __init__(self, Ens_type, Ens_args):
         self.Ens_type = Ens_type
@@ -60,6 +86,12 @@ class EnsembleConfig(BaseConfig):
         d['Ens_type'] = d['Ens_type'].__name__
         d.update(self.Ens_args)
         return d
+
+    def _set_internal_args(self, par, value):
+        if par in self.Ens_args:
+            self.Ens_args[par] = value
+        else:
+            raise AttributeError('Invalid config param')
 
 dummy5fold = Config(
     database='ml100k',

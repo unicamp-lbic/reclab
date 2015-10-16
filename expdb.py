@@ -12,6 +12,7 @@ from lockfile import locked
 
 DBLOCK = 'expdb.lock'
 DBFILE = 'experiments.db'
+
 ARGS = {'MF':'MF_file_prefix',
         'MF_time':'MF_time',
         'split': 'split_fname_prefix',
@@ -71,6 +72,17 @@ class ExperimentDB(object):
             df.index.get_level_values('exp_id')[0] returns the exp_id
             '''
             return df.index.get_level_values('exp_id')[0]
+
+    @locked(DBLOCK)
+    def get_ids_dict(self, adict):
+        self._load_db()
+        df = self._get_entries(adict)
+        if df is not None:
+            '''
+            df.index returns a MultiIndex object
+            df.index.get_level_values('exp_id') returns the exp_ids
+            '''
+            return df.index.get_level_values('exp_id')
 
     def get_arg_val(self, exp_id, arg_name, conf=None):
         return self.get_fold_arg_val(exp_id, 0, arg_name, conf)
