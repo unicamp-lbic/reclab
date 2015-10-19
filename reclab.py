@@ -10,14 +10,17 @@ import argparse
 import time
 from datetime import datetime
 import numpy as np
+import matplotlib.pyplot as plt
 import config
 import os
+from subprocess import call
+from sklearn.grid_search import ParameterGrid
 import evaluation as evalu
 import data
 import datasplit as ds
 import expdb
 import databases
-from subprocess import call
+import plot
 
 
 def main():
@@ -25,7 +28,7 @@ def main():
     Parse command line params
     '''
     parser = argparse.ArgumentParser(description='Run recommender training/evaluation')
-    parser.add_argument('action', help='train, test, metrics, clear_db, \
+    parser.add_argument('action', help='train, test, metrics, plot, clear_db, \
     clear_exp --id EXP_ID, clear_conf -c CONFIG, show_db')
     parser.add_argument('-c', '--config', action='append',
                         help='Configuration setting for this run \
@@ -40,7 +43,13 @@ def main():
     parser.add_argument('--setpar', action='append', help='--setpar parname=value')
     parser.add_argument('--ensemble', help='--ensemble ENSEMBLE_CONFIG. \
     Do ensemble. Use with --sweep --config --values')
-    parser.add_argument('--set', help='--set test|valid, to use with metrics action')
+    parser.add_argument('--set', help='--set test|valid, to use with metrics and plot action')
+
+    parser.add_argument('--type', help='--type metrics|PR, to use with plot action')
+    parser.add_argument('--atN', help='--atN N, to use with metrics plot')
+    parser.add_argument('--xaxis', help='--xaxis param_name, which param will be on x axis in a metrics plot')
+
+
     args = parser.parse_args()
 
     '''
@@ -67,6 +76,14 @@ def main():
     if args.action == 'clear_exp':
         exp_id = args.id
         exp_db.clear_experiment(exp_id)
+        exit()
+
+    '''
+    Plot action
+    Will load more than one config
+    '''
+    if args.action == 'plot':
+        run_plot(args, exp_db)
         exit()
 
     '''
@@ -109,6 +126,7 @@ def main():
         exp_db.clear_conf(conf)
         exit()
 
+
     '''
     Check for ensemble action
     will need --config, --sweep par_name=par_values, --ensemble
@@ -125,12 +143,16 @@ def main():
 
 
 def run_sweep(args, conf, exp_db):
+    param_grid = {}
     for arg in args.sweep:
         sweep = arg.split('=')[0]
         values = arg.split('=')[1].split(',')
-        for v in values:
-            conf.set_par(sweep, v)
-            run_exp(args, conf, exp_db)
+        param_grid[sweep] = values
+    param_grid = list(ParameterGrid(param_grid))
+    for param_set in param_grid:
+        for param, value in param_set.items():
+            conf.set_par(param, value)
+        run_exp(args, conf, exp_db)
 
 
 def run_exp(args, conf, exp_db):
@@ -197,13 +219,13 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
 
     RS = conf.RS_type(**conf.RS_args)
     if args.ensemble is not None:
-        if args.action == 'train':
+        if args.action.find('train') > -1:
             evalu.load_model(RS, FOLD_PATH, split)
-        elif args.action == 'test' or args.action == 'metrics':
+        elif args.action.find('test') > -1 or args.action.find('metrics') > -1:
             RS = evalu.load_recommendations(FOLD_PATH)
         return RS
 
-    if args.action == 'train':
+    if args.action.find('train') > -1:
         # Gen/Load MF if applicable
         if conf.is_MF:
             MF_file_prefix = exp_db.get_fold_arg_val(EXP_ID, fold, 'MF_file_prefix', conf)
@@ -223,14 +245,14 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
         exp_db.set_fold_arg_val(EXP_ID, fold, 'train_file_prefix', FOLD_PATH)
         exp_db.set_fold_arg_val(EXP_ID, fold, 'train_time', tr_dt)
 
-    elif args.action == 'test':
+    if args.action.find('test'):
         t0 = time.time()
         evalu.test_save(RS, FOLD_PATH, split)
         tst_dt = time.time() - t0
         exp_db.set_fold_arg_val(EXP_ID, fold, 'test_file_prefix', FOLD_PATH)
         exp_db.set_fold_arg_val(EXP_ID, fold, 'test_time', tst_dt)
 
-    elif args.action == 'metrics':
+    if args.action.find('metrics') > -1:
         metrics = evalu.Metrics(split, filepath=FOLD_PATH)
         metrics.def_test_set(args.set)
         metrics.error_metrics()
@@ -291,21 +313,21 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
         for i, v in enumerate(values):
             ens.RS_list.append(RS_list[i][fold])
 
-        if args.action == 'train':
+        if args.action.find('train') > -1:
             t0 = time.time()
             evalu.ensemble_train_save(ens, FOLD_PATH, split)
             tr_dt = time.time() - t0
             exp_db.set_fold_arg_val(EXP_ID, fold, 'train_file_prefix', FOLD_PATH)
             exp_db.set_fold_arg_val(EXP_ID, fold, 'train_time', tr_dt)
 
-        elif args.action == 'test':
+        if args.action.find('test') > -1:
             t0 = time.time()
             evalu.ensemble_test_save(ens, FOLD_PATH, split)
             tst_dt = time.time() - t0
             exp_db.set_fold_arg_val(EXP_ID, fold, 'test_file_prefix', FOLD_PATH)
             exp_db.set_fold_arg_val(EXP_ID, fold, 'test_time', tst_dt)
 
-        elif args.action == 'metrics':
+        if args.action.find('metrics') > -1:
             metrics = evalu.Metrics(split, filepath=FOLD_PATH)
             metrics.def_test_set(args.set)
             metrics.error_metrics()
@@ -329,6 +351,23 @@ def run_plot(args, exp_db):
     a metric plot will need --xaxis param_name
     a PR plot only uses configs and sweeps
     '''
+    if args.type is None:
+        raise ValueError('Must inform plot type: --type metrics|PR')
+
+    plt.figure()
+
+    '''
+    Try to load ensemble config if applicable
+    '''
+    if args.ensemble is not None:
+        try:
+            ensemble_conf = config.valid_ensemble_configs[args.ensemble]
+            iterable = zip(args.config+[ensemble_conf], args.sweep)
+        except KeyError:
+            raise KeyError('Invalid ensemble configuration setting')
+    else:
+        iterable = zip(args.config, args.sweep)
+
     for conf_arg, sweep_args in zip(args.config, args.sweep):
         '''
         Try to load configuration settings
@@ -339,32 +378,40 @@ def run_plot(args, exp_db):
             raise KeyError('Invalid configuration setting')
 
         '''
+        process setpar
+        '''
+        if args.setpar is not None:
+            for par_val in args.setpar:
+                if par_val.find('=') < 0:
+                    raise ValueError('Must use --setpar parname=value')
+                par, value = tuple(par_val.split('='))
+                if value is not None:
+                    try:
+                        conf.set_par(par, value)
+                    except AttributeError:
+                        if args.ensemble is not None:
+                            ensemble_conf.set_par(par, value)
+                else:
+                    raise ValueError('Must use --setpar parname=value')
+
+        '''
         parse sweep params
         '''
+
         sweep = sweep_args.split('=')[0]
         values = sweep_args.split('=')[1].split(',')
         for v in values:
             conf.set_par(sweep, v)
-            plt.figure()
             if args.type == 'metrics':
-                metric_names = evalu.Metrics.ir_metric_names(args.set, args.atN) + \
-                    evalu.Metrics.error_metric_names(args.set)
-                select = conf.as_dict()
-                del select[args.xaxis]
-                ids = exp_db.get_ids_dict(select)
-                plot_single_metric(df, x_axis, metric, **plotargs)
+                plot.metrics(exp_db, conf, sweep, v, args)
 
             elif args.type == 'PR':
-                id_ = exp_db.get_id(conf)
+                plot.PR_curve(exp_db, conf, sweep, v, args)
 
-    '''
-    Try to load ensemble config if applicable
-    '''
-    if args.ensemble is not None:
-        try:
-            ensemble_conf = config.valid_ensemble_configs[args.ensemble]
-        except KeyError:
-            raise KeyError('Invalid ensemble configuration setting')
+
+
+    plt.show()
+
 
 
 if __name__=='__main__':
