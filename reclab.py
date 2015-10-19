@@ -260,10 +260,6 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
         for arg, val in metrics.metrics.items():
             exp_db.set_fold_arg_val(EXP_ID, fold, arg, val)
 
-    else:
-        raise ValueError('Invalid action')
-
-
     return RS
 
 
@@ -271,6 +267,7 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
     # ensemble will only use one sweep for now
     sweep = args.sweep[0].split('=')[0]
     values = args.sweep[0].split('=')[1].split(',')
+    RS_list = []
     for v in values:
         conf.set_par(sweep, v)
         RS_folds = run_exp(args, conf, exp_db)
@@ -281,9 +278,9 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
     '''
     params = conf.as_dict()
     params.update(ensemble_conf.as_dict())
-    params[args.sweep] = 'varpar'
-    params['varpar'] = args.sweep
-    params['varpar_values'] = values
+    params[sweep] = 'varpar'
+    params['varpar'] = sweep
+    params['varpar_values'] = str(values)
     EXP_ID = exp_db.get_id_dict(params)
     if EXP_ID is None:
         EXP_ID = get_timestamp()
@@ -334,8 +331,6 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
             metrics.list_metrics(conf.threshold)
             for arg, val in metrics.metrics.items():
                 exp_db.set_fold_arg_val(EXP_ID, fold, arg, val)
-        else:
-            raise ValueError('Invalid action')
 
 
 def get_timestamp():
@@ -360,23 +355,21 @@ def run_plot(args, exp_db):
     Try to load ensemble config if applicable
     '''
     if args.ensemble is not None:
-        try:
-            ensemble_conf = config.valid_ensemble_configs[args.ensemble]
-            iterable = zip(args.config+[ensemble_conf], args.sweep)
-        except KeyError:
-            raise KeyError('Invalid ensemble configuration setting')
+        iterable = zip(args.config+[args.ensemble], args.sweep)
     else:
         iterable = zip(args.config, args.sweep)
 
-    for conf_arg, sweep_args in zip(args.config, args.sweep):
+    for conf_arg, sweep_args in iterable:
         '''
         Try to load configuration settings
         '''
         try:
             conf = config.valid_configs[conf_arg]
         except KeyError:
-            raise KeyError('Invalid configuration setting')
-
+            try:
+                ensemble_conf = config.valid_ensemble_configs[conf_arg]
+            except:
+                raise KeyError('Invalid configuration setting')
         '''
         process setpar
         '''
@@ -401,6 +394,7 @@ def run_plot(args, exp_db):
         sweep = sweep_args.split('=')[0]
         values = sweep_args.split('=')[1].split(',')
         for v in values:
+
             conf.set_par(sweep, v)
             if args.type == 'metrics':
                 plot.metrics(exp_db, conf, sweep, v, args)

@@ -66,6 +66,8 @@ def pd_select(dataframe, select):
         data = dataframe
         for key, value in select.items():
             data = data[data[key] == value]
+            if len(data) == 0:
+                return None
         return data
     except KeyError:
         return None
