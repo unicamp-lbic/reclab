@@ -174,7 +174,10 @@ class ExperimentDB(object):
         self._save_db()
 
     def clear_conf(self, conf):
-        self.clear_experiment(self.get_id(conf))
+        exp_id = self.get_id(conf)
+        if exp_id is None:
+            raise RuntimeError('No experiment matcing this configuration')
+        self.clear_experiment(exp_id)
 
     def __str__(self):
         return self.db.__str__()
