@@ -35,7 +35,7 @@ class timing(object):
         self.tic()
         return dt
 
-class Notificator(object):
+class Notifier(object):
     def __init__(self, opt_msg=''):
         self.FROM = "thalitafdrumond@gmail.com"
         self.TO = self.FROM # must be a list
