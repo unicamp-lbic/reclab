@@ -171,6 +171,7 @@ class ExperimentDB(object):
         self._load_db()
         call(["trash", './results/'+ exp_id + '/'])
         self.db.drop(exp_id, inplace=True)
+        print('cleared experiment', exp_id)
         self._save_db()
 
     def clear_conf(self, conf):
