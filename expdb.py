@@ -175,9 +175,8 @@ class ExperimentDB(object):
 
     def clear_conf(self, conf):
         exp_id = self.get_id(conf)
-        if exp_id is None:
-            raise RuntimeError('No experiment matcing this configuration')
-        self.clear_experiment(exp_id)
+        if exp_id is not None:
+            self.clear_experiment(exp_id)
 
     def __str__(self):
         return self.db.__str__()

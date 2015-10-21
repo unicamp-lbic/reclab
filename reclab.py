@@ -122,7 +122,7 @@ def main():
     '''
     process clear_conf command
     '''
-    if args.action == 'clear_conf':
+    if args.action == 'clear_conf' and args.sweep is None:
         exp_db.clear_conf(conf)
         exit()
 
@@ -163,7 +163,12 @@ def run_sweep(args, conf, exp_db, ensemble_conf=None):
         for param, value in param_set.items():
             set_par(param, value, conf, ensemble_conf)
         # param_set loaded, now run
-        if ensemble_conf is not None:
+        '''
+        Process clear exp command first
+        '''
+        if args.action == 'clear_conf':
+            exp_db.clear_conf(conf)
+        elif ensemble_conf is not None:
             run_ensemble(args, conf, ensemble_conf, exp_db)
         else:
             run_exp(args, conf, exp_db)
