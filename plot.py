@@ -5,7 +5,6 @@ Created on Thu Oct 15 16:41:28 2015
 @author: thalita
 """
 
-from utils import pd_select
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -29,7 +28,8 @@ def PR_curve(exp_db, conf, sweep, value, args):
     df = get_xy([exp_id], exp_db, metric_names)
     if len(df) is 0:
         raise RuntimeError('No metrics available')
-    RS_name = conf.RS_type.__name__.replace('recommender','')
+
+    RS_name = conf.get_name()
     plot_PR(df, metric_names, label=RS_name+' '+sweep+'='+str(value))
 
 
@@ -48,12 +48,13 @@ def plot_PR(df, metric_names,**plot_args):
     for atN in values:
         # values are (mean, std) tuples
         y.append(values[atN]['P'][0][0])
-        yerr.append(values[atN]['P'][0][1]/2)
+        yerr.append(values[atN]['P'][0][1])
         x.append(values[atN]['R'][0][0])
-        xerr.append(values[atN]['R'][0][1]/2)
+        xerr.append(values[atN]['R'][0][1])
 
 
     plt.errorbar(x, y, yerr, xerr,**plot_args)
+    plt.grid(which='both')
     plt.ylabel('Precision')
     plt.xlabel('Recall')
 
@@ -62,11 +63,73 @@ def metrics(exp_db, conf, sweep, value, args):
         raise ValueError('must inform --atN N')
     if args.set is None:
         raise ValueError('must inform --set valid|test')
+
+    if args.type.find('error') > -1:
+        metric_names =  evalu.Metrics.error_metric_names(args.set)
+    else:
+        metric_names = evalu.Metrics.ir_metric_names(args.set, [int(args.atN)]) + \
+            evalu.Metrics.error_metric_names(args.set)
+    select = conf.as_dict()
+    ids = exp_db.get_ids_dict(select)
+    if ids is None:
+        raise RuntimeError('No corresponding metrics available')
+    df = get_xy(ids, exp_db, metric_names)
+    if len(df) is 0:
+        raise RuntimeError('No corresponding metrics available')
+    RS_name = conf.get_name()
+    bar_plot_metrics(df, metric_names,
+                     label=RS_name+' '+sweep.replace('_',' ')+'='+str(value))
+    plt.autoscale()
+
+
+# static
+__plot_count = 0
+
+
+def bar_plot_metrics(dataframe, metrics, suptitle=None, **plotargs):
+    global __plot_count
+    width = int(np.ceil(np.sqrt(len(metrics))))
+    height = int(np.ceil(len(metrics)/width))
+    plt.gcf().set_size_inches(4*width, 3*height, forward=True)
+    for i, metric in enumerate(metrics):
+        plt.subplot(height, width, i+1)
+        single_bar_plot(dataframe, metric, **plotargs)
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.9)
+    if suptitle is not None:
+        plt.suptitle(suptitle)
+    __plot_count += 1
+
+
+def single_bar_plot(df, metric, **plotargs):
+    width = 0.7
+    left = __plot_count + 0.5 * (1 - width)
+    y = height = df[metric].values[0][0]
+    x = left + width/2
+    yerr = df[metric].values[0][1]
+    plt.bar(left, height, width, color=colors[__plot_count], **plotargs)
+    plt.errorbar(x, y, yerr, color='k')
+    plt.legend(loc='lower right', fontsize='x-small', framealpha=0.8)
+    plt.title(metric.replace('_', ' '), fontsize='small')
+    plt.yticks(fontsize='small')
+    plt.gca().get_xaxis().set_visible(False)
+    plt.grid(axis='y', which='both')
+
+
+def metrics_xaxis(exp_db, conf, sweep, value, args):
+    if args.atN is None:
+        raise ValueError('must inform --atN N')
+    if args.set is None:
+        raise ValueError('must inform --set valid|test')
     if args.xaxis is None:
         raise ValueError('must inform --xaxis param_name')
 
-    metric_names = evalu.Metrics.ir_metric_names(args.set, [int(args.atN)]) + \
-        evalu.Metrics.error_metric_names(args.set)
+    if args.type.find('error') > -1:
+        metric_names =  evalu.Metrics.error_metric_names(args.set)
+    else:
+        metric_names = evalu.Metrics.ir_metric_names(args.set, [int(args.atN)]) + \
+            evalu.Metrics.error_metric_names(args.set)
+
     select = conf.as_dict()
     del select[args.xaxis]
     ids = exp_db.get_ids_dict(select)
@@ -75,10 +138,10 @@ def metrics(exp_db, conf, sweep, value, args):
     df = get_xy(ids, exp_db, metric_names, args.xaxis)
     if len(df) is 0:
         raise RuntimeError('No corresponding metrics available')
-    RS_name = conf.RS_type.__name__.replace('recommender','')
-    plot_metrics(df, args.xaxis , metric_names,
-                 label=RS_name+' '+sweep.replace('_',' ')+'='+str(value))
-
+    RS_name = conf.get_name()
+    plt.gcf().set_size_inches(8, 4, forward=True)
+    plot_metrics_xaxis(df, args.xaxis , metric_names,
+                 label=RS_name+' '+sweep.replace('_', ' ')+'='+str(value))
 
 
 def get_xy(ids, exp_db, metric_names, x_axis=None):
@@ -99,28 +162,29 @@ def get_xy(ids, exp_db, metric_names, x_axis=None):
     return new_df
 
 
-def plot_metrics(dataframe, x_axis, metrics,
-                 suptitle=None, **plotargs):
+def plot_metrics_xaxis(dataframe, x_axis, metrics,
+                       suptitle=None, **plotargs):
     width = int(np.ceil(np.sqrt(len(metrics))))
     height = int(np.ceil(len(metrics)/width))
-    #plt.figure(figsize=(4*width,3*height))
+    plt.gcf().set_size_inches(4*width, 3*height, forward=True)
     for i, metric in enumerate(metrics):
         plt.subplot(height, width, i+1)
-        plot_single_metric(dataframe, x_axis, metric, **plotargs)
+        plot_single_metric_xaxis(dataframe, x_axis, metric, **plotargs)
     plt.tight_layout()
     plt.subplots_adjust(top=0.9)
     if suptitle is not None:
         plt.suptitle(suptitle)
 
 
-def plot_single_metric(df, x_axis, metric, **plotargs):
+def plot_single_metric_xaxis(df, x_axis, metric, **plotargs):
     df.sort(x_axis, inplace=True)
     x = df[x_axis]
     y = [mean for mean, std in df[metric]]
-    yerr = [std/2 for mean, std in df[metric]]
+    yerr = [std for mean, std in df[metric]]
     plt.errorbar(x, y, yerr, marker='o', **plotargs)
     plt.legend(loc='best', fontsize='small', framealpha=0.5)
-    plt.title(metric.replace('_', ' '))
+    plt.title(metric.replace('_', ' '), fontsize='small')
+    plt.yticks(fontsize='small')
+    plt.xticks(fontsize='small')
     plt.xlabel(x_axis.replace('_', ' '))
     plt.grid(which='both')
-

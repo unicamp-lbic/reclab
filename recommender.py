@@ -10,7 +10,7 @@ import abc
 import neighbors
 from BMF import BMF
 import numpy as np
-from utils import oneD
+from utils import oneD, RANDOM_SEED
 from sklearn.random_projection import GaussianRandomProjection,\
                                       SparseRandomProjection
 from sklearn.feature_extraction.text import TfidfTransformer
@@ -345,6 +345,10 @@ class BMFRPrecommender(BMFrecommender):
         BMFrecommender.__init__(self, **BMF_args)
         self.dim_red = dim_red
         self.RP = RP_type
+        # create a random seed that will be the same for a certain BMF,
+        # to allow fair comparisons among othre params
+        self.seed = int(str(BMF_args['min_coverage']).replace('.','') \
+            + str(BMF_args['bin_threshold'])) + RANDOM_SEED
 
     def transform(self, user_vector):
         new_vec = BMFrecommender.transform(self, user_vector)
@@ -367,6 +371,7 @@ class BMFRPrecommender(BMFrecommender):
         else:
             n_components = self.dim_red
 
+        np.random.RandomState(self.seed)
         if self.RP == 'gaussian':
             self.RP = GaussianRandomProjection(n_components=n_components)
         elif self.RP == 'sparse':

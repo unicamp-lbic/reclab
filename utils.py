@@ -9,6 +9,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from time import time
 
+# a fixed random_seed randomly picked once
+# used np.random.rand() and picked first 8 decimal digits
+RANDOM_SEED = 13986301
 
 def oneD(array):
     # TODO problably the ndarray.flatten method can do this

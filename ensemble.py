@@ -122,7 +122,7 @@ class LinRegRatingEnsemble(RatingEnsemble):
         alpha * [ (l1_ratio) * l1_penalty + (1-l1_ratio) * l2_penalty]
         '''
         self.model = ElasticNet(alpha=regularization,
-                                l1_ratio=l1_ratio)
+                                l1_ratio=l1_ratio, positive=True)
     def fit(self, split):
         self.database = split.train
         X = []

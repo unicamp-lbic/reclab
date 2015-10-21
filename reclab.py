@@ -42,7 +42,8 @@ def main():
                         help='specific folds to perform action on, comma-separated')
     parser.add_argument('--setpar', action='append', help='--setpar parname=value')
     parser.add_argument('--ensemble', help='--ensemble ENSEMBLE_CONFIG. \
-    Do ensemble. Use with --sweep --config --values')
+    Do ensemble. Use with --varpar --config')
+    parser.add_argument('--varpar', help='--varpar param_name=value')
     parser.add_argument('--set', help='--set test|valid, to use with metrics and plot action')
 
     parser.add_argument('--type', help='--type metrics|PR, to use with plot action')
@@ -112,11 +113,10 @@ def main():
                 raise ValueError('Must use --setpar parname=value')
             par, value = tuple(par_val.split('='))
             if value is not None:
-                try:
-                    conf.set_par(par, value)
-                except AttributeError:
-                    if args.ensemble is not None:
-                        ensemble_conf.set_par(par, value)
+                if args.ensemble is not None:
+                    set_par(par, value, conf, ensemble_conf)
+                else:
+                    set_par(par, value, conf)
             else:
                 raise ValueError('Must use --setpar parname=value')
     '''
@@ -131,28 +131,42 @@ def main():
     Check for ensemble action
     will need --config, --sweep par_name=par_values, --ensemble
     '''
-    if args.ensemble is not None:
-        run_ensemble(args, conf, ensemble_conf, exp_db)
+    if args.sweep is not None and args.ensemble is not None:
+        run_sweep(args, conf, exp_db, ensemble_conf)
     elif args.sweep is not None:
-        '''
-        Check for a param sweep
-        '''
         run_sweep(args, conf, exp_db)
+    elif args.ensemble is not None:
+        run_ensemble(args, conf, ensemble_conf, exp_db)
     else:
         run_exp(args, conf, exp_db)
 
+def set_par(par, value, conf, ensemble_conf=None):
+    try:
+        conf.set_par(par, value)
+    except AttributeError:
+        if ensemble_conf is not None:
+            ensemble_conf.set_par(par, value)
 
-def run_sweep(args, conf, exp_db):
+
+def gen_param_grid(args):
     param_grid = {}
     for arg in args.sweep:
         sweep = arg.split('=')[0]
         values = arg.split('=')[1].split(',')
         param_grid[sweep] = values
     param_grid = list(ParameterGrid(param_grid))
+    return param_grid
+
+def run_sweep(args, conf, exp_db, ensemble_conf=None):
+    param_grid = gen_param_grid(args)
     for param_set in param_grid:
         for param, value in param_set.items():
-            conf.set_par(param, value)
-        run_exp(args, conf, exp_db)
+            set_par(param, value, conf, ensemble_conf)
+        # param_set loaded, now run
+        if ensemble_conf is not None:
+            run_ensemble(args, conf, ensemble_conf, exp_db)
+        else:
+            run_exp(args, conf, exp_db)
 
 
 def run_exp(args, conf, exp_db):
@@ -264,12 +278,11 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
 
 
 def run_ensemble(args, conf, ensemble_conf, exp_db):
-    # ensemble will only use one sweep for now
-    sweep = args.sweep[0].split('=')[0]
-    values = args.sweep[0].split('=')[1].split(',')
+    varpar = args.varpar.split('=')[0]
+    values = args.varpar.split('=')[1].split(',')
     RS_list = []
     for v in values:
-        conf.set_par(sweep, v)
+        conf.set_par(varpar, v)
         RS_folds = run_exp(args, conf, exp_db)
         RS_list.append(RS_folds)
 
@@ -278,8 +291,8 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
     '''
     params = conf.as_dict()
     params.update(ensemble_conf.as_dict())
-    params[sweep] = 'varpar'
-    params['varpar'] = sweep
+    params[varpar] = 'varpar'
+    params['varpar'] = varpar
     params['varpar_values'] = str(values)
     EXP_ID = exp_db.get_id_dict(params)
     if EXP_ID is None:
@@ -347,17 +360,19 @@ def run_plot(args, exp_db):
     a PR plot only uses configs and sweeps
     '''
     if args.type is None:
-        raise ValueError('Must inform plot type: --type metrics|PR')
+        raise ValueError('Must inform plot type: --type metrics||PR')
 
     plt.figure()
 
-    '''
-    Try to load ensemble config if applicable
-    '''
-    if args.ensemble is not None:
-        iterable = zip(args.config+[args.ensemble], args.sweep)
-    else:
+    if args.ensemble is not None and args.config is not None:
+        if len(args.config) == 1:
+            iterable = []
+        else:
+            iterable = zip(args.config[1:], args.sweep[1:])
+    elif args.config is not None:
         iterable = zip(args.config, args.sweep)
+    else:
+        raise ValueError('At least one config is necessary')
 
     for conf_arg, sweep_args in iterable:
         '''
@@ -366,10 +381,7 @@ def run_plot(args, exp_db):
         try:
             conf = config.valid_configs[conf_arg]
         except KeyError:
-            try:
-                ensemble_conf = config.valid_ensemble_configs[conf_arg]
-            except:
-                raise KeyError('Invalid configuration setting')
+            raise KeyError('Invalid configuration setting')
         '''
         process setpar
         '''
@@ -379,34 +391,69 @@ def run_plot(args, exp_db):
                     raise ValueError('Must use --setpar parname=value')
                 par, value = tuple(par_val.split('='))
                 if value is not None:
-                    try:
-                        conf.set_par(par, value)
-                    except AttributeError:
-                        if args.ensemble is not None:
-                            ensemble_conf.set_par(par, value)
+                    set_par(par, value, conf)
                 else:
                     raise ValueError('Must use --setpar parname=value')
-
         '''
-        parse sweep params
+        plot
         '''
+        sweep_plot(sweep_args, conf, exp_db, args)
 
-        sweep = sweep_args.split('=')[0]
-        values = sweep_args.split('=')[1].split(',')
-        for v in values:
+    if args.ensemble is not None:
+        '''
+        Ensemble part
+        '''
+        try:
+            ensemble_conf = config.valid_ensemble_configs[args.ensemble]
+        except:
+            raise KeyError('Invalid configuration setting')
+        '''
+        Try to load configuration settings
+        '''
+        try:
+            conf = config.valid_configs[args.config[0]]
+        except KeyError:
+            raise KeyError('Invalid configuration setting')
 
-            conf.set_par(sweep, v)
-            if args.type == 'metrics':
-                plot.metrics(exp_db, conf, sweep, v, args)
-
-            elif args.type == 'PR':
-                plot.PR_curve(exp_db, conf, sweep, v, args)
-
-
+        varpar = args.varpar.split('=')[0]
+        values = args.varpar.split('=')[1].split(',')
+        conf = config.MixedConfig(conf, ensemble_conf, varpar,values)
+        '''
+        process setpar
+        '''
+        if args.setpar is not None:
+            for par_val in args.setpar:
+                if par_val.find('=') < 0:
+                    raise ValueError('Must use --setpar parname=value')
+                par, value = tuple(par_val.split('='))
+                if value is not None:
+                    set_par(par, value, conf)
+                else:
+                    raise ValueError('Must use --setpar parname=value')
+        '''
+        Plot
+        '''
+        sweep_args = args.sweep[0]
+        sweep_plot(sweep_args, conf, exp_db, args)
 
     plt.show()
 
+def sweep_plot(sweep_args, conf, exp_db, args):
+    '''
+    parse sweep params
+    '''
+    sweep = sweep_args.split('=')[0]
+    values = sweep_args.split('=')[1].split(',')
+    for v in values:
+        set_par(sweep, v, conf)
+        if args.type.find('metrics') > -1:
+            if args.xaxis is not None:
+                plot.metrics_xaxis(exp_db, conf, sweep, v, args)
+            else:
+                plot.metrics(exp_db, conf, sweep, v, args)
 
+        elif args.type == 'PR':
+            plot.PR_curve(exp_db, conf, sweep, v, args)
 
 if __name__=='__main__':
     main()

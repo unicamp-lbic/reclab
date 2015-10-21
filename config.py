@@ -58,6 +58,9 @@ class Config(BaseConfig):
             self.MF_type = RS_type.__MF_type__
             self.MF_args = RS_type.__MF_args__(RS_args)
 
+    def get_name(self):
+        return self.RS_type.__name__.replace('recommender','')
+
     def as_dict(self):
         d = BaseConfig.as_dict(self)
         del d['RS_args']
@@ -80,6 +83,10 @@ class EnsembleConfig(BaseConfig):
         self.Ens_type = Ens_type
         self.Ens_args = Ens_args
 
+    def get_name(self):
+        return self.Ens_type.__name__.replace('Ensemble','Ens')\
+            .replace('Rating','R').replace('List','L')
+
     def as_dict(self):
         d = BaseConfig.as_dict(self)
         del d['Ens_args']
@@ -92,6 +99,44 @@ class EnsembleConfig(BaseConfig):
             self.Ens_args[par] = value
         else:
             raise AttributeError('Invalid config param')
+
+
+class MixedConfig(Config, EnsembleConfig):
+    def __init__(self, conf, ens_conf, varpar, varpar_values):
+        conf_dict = conf.__dict__
+        if conf.is_MF:
+            del conf_dict['MF_args']
+            del conf_dict['MF_type']
+        conf_dict['RS_args'][varpar] = 'varpar'
+        Config.__init__(self, **conf_dict)
+        EnsembleConfig.__init__(self, **ens_conf.__dict__)
+        self.varpar = varpar
+        self.varpar_values = str(varpar_values)
+
+    def get_name(self):
+        return EnsembleConfig.get_name(self) + '(%s)' % Config.get_name(self)
+
+    def _set_internal_args(self, par, value):
+        if par in self.RS_args:
+            self.RS_args[par] = value
+            if self.is_MF:
+                self.MF_type = self.RS_type.__MF_type__
+                self.MF_args = self.RS_type.__MF_args__(self.RS_args)
+        elif par in self.Ens_args:
+            self.Ens_args[par] = value
+        else:
+            raise AttributeError('Invalid config param')
+
+    def as_dict(self):
+        d = BaseConfig.as_dict(self)
+        del d['Ens_args']
+        d['Ens_type'] = d['Ens_type'].__name__
+        d.update(self.Ens_args)
+        del d['RS_args']
+        d['RS_type'] = d['RS_type'].__name__
+        d.update(self.RS_args)
+        return d
+
 
 dummy5fold = Config(
     database='ml100k',
@@ -184,6 +229,28 @@ BMFRP5fold = Config(
              'bin_threshold': 3,
              'offline_kNN': True,
              'weighting': 'tf-idf'},
+    nfolds=5,
+    is_MF=True,
+    threshold=3,
+    pct_hidden=0.2
+)
+
+BMFRPLSH5fold = Config(
+    database='ml100k',
+    RS_type=rec.BMFRPrecommender,
+    RS_args={'RP_type': 'sparse',
+             'dim_red': 0.8,
+             'n_neighbors': 20,
+             'model_size': 30,
+             'neighbor_type': 'user',
+             'algorithm': 'brute',
+             'metric': 'cosine',
+             'min_coverage': 1.0,
+             'bin_threshold': 3,
+             'offline_kNN': True,
+             'weighting': 'tf-idf',
+             'n_estimators': 10,
+             'n_candidates': 2},
     nfolds=5,
     is_MF=True,
     threshold=3,
