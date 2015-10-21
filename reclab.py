@@ -7,6 +7,7 @@ Created on Tue Sep 15 16:54:46 2015
 """
 
 import argparse
+import sys
 import time
 from datetime import datetime
 import numpy as np
@@ -21,6 +22,7 @@ import datasplit as ds
 import expdb
 import databases
 import plot
+from utils import Notifier
 
 
 def main():
@@ -131,6 +133,7 @@ def main():
     Check for ensemble action
     will need --config, --sweep par_name=par_values, --ensemble
     '''
+    notif = Notifier(str(sys.argv))
     if args.sweep is not None and args.ensemble is not None:
         run_sweep(args, conf, exp_db, ensemble_conf)
     elif args.sweep is not None:
@@ -139,6 +142,8 @@ def main():
         run_ensemble(args, conf, ensemble_conf, exp_db)
     else:
         run_exp(args, conf, exp_db)
+    notif.notify()
+
 
 def set_par(par, value, conf, ensemble_conf=None):
     try:

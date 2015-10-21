@@ -8,6 +8,10 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from time import time
+import smtplib
+import getpass
+from email.mime.text import MIMEText
+
 
 # a fixed random_seed randomly picked once
 # used np.random.rand() and picked first 8 decimal digits
@@ -30,6 +34,39 @@ class timing(object):
         print(text, 'Time elapsed:',dt,' s')
         self.tic()
         return dt
+
+class Notificator(object):
+    def __init__(self, opt_msg=''):
+        self.FROM = "thalitafdrumond@gmail.com"
+        self.TO = self.FROM # must be a list
+
+        SUBJECT = 'Done'
+
+        TEXT = "Finished script\n" + opt_msg
+
+        # Prepare actual message
+        msg = MIMEText(TEXT)
+        msg['Subject'] = SUBJECT
+        msg['From'] = self.FROM
+        msg['To'] = self.TO
+        self.message = msg.as_string()
+        self.server = smtplib.SMTP_SSL('smtp.gmail.com:465')
+
+        for i in range(3):
+            try:
+                self.server.login(self.FROM,
+                                  getpass.getpass('%s gmail password:' % self.FROM))
+                break
+            except smtplib.SMTPAuthenticationError:
+                if i < 2:
+                    print('Wrong password, try again')
+                else:
+                    print ('Wrong password, exiting')
+
+    def notify(self):
+        # Send the mail
+        self.server.sendmail(self.FROM, self.TO, self.message)
+        self.server.quit()
 
 
 def read_result(fname, path='', meanstd=True):
