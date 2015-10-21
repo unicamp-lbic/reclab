@@ -10,8 +10,9 @@ from utils import pd_select
 from subprocess import call
 from lockfile import locked
 
-DBLOCK = 'expdb.lock'
-DBFILE = 'experiments.db'
+RESULTS_FOLDER = 'results/'
+DBLOCK = RESULTS_FOLDER + 'expdb.lock'
+DBFILE = RESULTS_FOLDER + 'experiments.db'
 
 ARGS = {'MF':'MF_file_prefix',
         'MF_time':'MF_time',
