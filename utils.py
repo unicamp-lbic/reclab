@@ -51,11 +51,12 @@ class Notifier(object):
         msg['To'] = self.TO
         self.message = msg.as_string()
         self.server = smtplib.SMTP_SSL('smtp.gmail.com:465')
+        self.passwd = None
 
         for i in range(3):
             try:
-                self.server.login(self.FROM,
-                                  getpass.getpass('%s gmail password:' % self.FROM))
+                self.passwd = getpass.getpass('%s gmail password:' % self.FROM)
+                self.server.login(self.FROM, self.passwd)
                 break
             except smtplib.SMTPAuthenticationError:
                 if i < 2:
@@ -65,6 +66,7 @@ class Notifier(object):
 
     def notify(self):
         # Send the mail
+        self.server.login(self.FROM, self.passwd)
         self.server.sendmail(self.FROM, self.TO, self.message)
         self.server.quit()
 
