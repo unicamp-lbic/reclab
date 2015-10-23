@@ -243,7 +243,7 @@ BMFRPLSH5fold = Config(
              'n_neighbors': 20,
              'model_size': 30,
              'neighbor_type': 'user',
-             'algorithm': 'brute',
+             'algorithm': 'LSH',
              'metric': 'cosine',
              'min_coverage': 1.0,
              'bin_threshold': 3,
