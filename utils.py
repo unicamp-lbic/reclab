@@ -38,7 +38,7 @@ class timing(object):
 class Notifier(object):
     def __init__(self, opt_msg=''):
         self.FROM = "thalitafdrumond@gmail.com"
-        self.TO = self.FROM # must be a list
+        self.TO = self.FROM
 
         SUBJECT = 'Done'
 
@@ -66,6 +66,7 @@ class Notifier(object):
 
     def notify(self):
         # Send the mail
+        self.server = smtplib.SMTP_SSL('smtp.gmail.com:465')
         self.server.login(self.FROM, self.passwd)
         self.server.sendmail(self.FROM, self.TO, self.message)
         self.server.quit()
