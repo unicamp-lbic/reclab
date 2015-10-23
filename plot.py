@@ -186,5 +186,5 @@ def plot_single_metric_xaxis(df, x_axis, metric, **plotargs):
     plt.title(metric.replace('_', ' '), fontsize='small')
     plt.yticks(fontsize='small')
     plt.xticks(fontsize='small')
-    plt.xlabel(x_axis.replace('_', ' '))
+    plt.xlabel(x_axis.replace('_', ' '), fontsize='small')
     plt.grid(which='both')
