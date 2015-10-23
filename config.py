@@ -181,7 +181,7 @@ BMF5fold = Config(
     database='ml100k',
     RS_type=rec.BMFrecommender,
     RS_args={'n_neighbors': 20,
-             'model_size': 2,
+             'model_size': 30,
              'neighbor_type': 'user',
              'algorithm': 'brute',
              'metric': 'cosine',
