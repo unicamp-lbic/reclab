@@ -9,7 +9,7 @@ from heapq import heappush, heappop
 from scipy import sparse
 import numpy as np
 import pandas as pd
-import pickle as pkl
+from utils import to_gzpickle, read_gzpickle
 
 
 class BaseDatabase(object):
@@ -86,11 +86,11 @@ class BaseRecommender(object):
     def save(self, filepath):
         d = self.__dict__
         del d['_database']
-        pd.to_pickle(d, filepath)
+        to_gzpickle(d, filepath)
 
     @abc.abstractmethod
     def load(self, filepath, database):
-        d = pd.read_pickle(filepath)
+        d = read_gzpickle(filepath)
         for atr, val in d.items():
             self.__setattr__(atr, val)
         self.database = database
@@ -145,12 +145,10 @@ class SavedRecommendations(RatingPredictor):
             lists[user] = RS.recommend(user, threshold=0)
             config = {'n_users': RS.database.n_users(),
                       'n_items': RS.database.n_items()}
-        with open(filepath, 'wb') as f:
-            pkl.dump((lists, config), f)
+        to_gzpickle((lists, config), filepath)
 
     def load(self, filepath):
-        with open(filepath, 'rb') as f:
-            self.lists, self.config = pkl.load(f)
+        self.lists, self.config = read_gzpickle(filepath)
         shape = (self.config['n_users'], self.config['n_items'])
         self.pred_ratings = np.zeros(shape=shape)
         for user in self.lists:

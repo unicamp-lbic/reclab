@@ -11,6 +11,7 @@ from sklearn.cross_validation import KFold
 from databases import HiddenRatingsDatabase
 from collections import defaultdict
 from bisect import bisect
+from utils import to_gzpickle, read_gzpickle
 
 
 class Split(object):
@@ -57,16 +58,14 @@ class Splitter(object):
         fname_prefix = filepath + self.suffix
         if self.nfolds == 1:
             split = Split(train=self.train, test=self.test, config=self.config)
-            with open(fname_prefix + '_split.pkl', 'wb') as f:
-                pkl.dump(split, f)
+            to_gzpickle(split, fname_prefix + '_split.pkl')
         else:
             for i in range(self.nfolds):
                 config = self.config.copy()
                 config['fold'] = i
                 split = Split(train=self.train[i], test=self.test[i], config=config)
                 fname = fname_prefix + '_split_%d.pkl' % i
-                with open(fname, 'wb') as f:
-                    pkl.dump(split, f)
+                to_gzpickle(split, fname)
         return fname_prefix
 
     def split_save(self, database, filepath):
@@ -128,8 +127,7 @@ class CVTestRatingSplitter(Splitter):
                 config['fold'] = fold
                 split = Split(train, valid, self.test, config)
                 fname = fname_prefix + '_split_%d.pkl' % fold
-                with open(fname, 'wb') as f:
-                    pkl.dump(split, f)
+                to_gzpickle(split, fname)
 
             return fname_prefix
 

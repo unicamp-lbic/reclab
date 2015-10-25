@@ -8,6 +8,7 @@ import numpy as np
 import pickle as pkl
 from base import SavedRecommendations
 from datasplit import Split
+from utils import to_gzpickle, read_gzpickle
 
 
 MF_SUFFIX = '_mf.pkl'
@@ -21,8 +22,7 @@ def load_split(split_fname_prefix, fold=None):
     else:
         fname =  split_fname_prefix + '_split_%d.pkl' % fold
 
-    with open(fname, 'rb') as f:
-        split = pkl.load(f)
+    split = read_gzpickle(fname)
 
     return split
 
@@ -30,15 +30,14 @@ def load_split(split_fname_prefix, fold=None):
 def gen_mf(split, filepath, RS):
     matrices = RS.gen_mf(split.train)
     fname = filepath + MF_SUFFIX
-    with open(fname, 'wb') as f:
-        pkl.dump(matrices, f)
+    to_gzpickle(matrices, fname)
 
 
 def load_mf(filepath, RS):
-    with open(filepath + MF_SUFFIX, 'rb') as f:
-        matrices = pkl.load(f)
+    matrices = read_gzpickle(filepath)
     RS.load_mf(*matrices)
     return RS
+
 
 def train_save(RS, split, out_filepath):
     RS.fit(split.train)
@@ -55,13 +54,16 @@ def ensemble_train_save(ens, out_filepath, split):
     ens.fit(split)
     ens.save(out_filepath+TRAIN_SUFFIX)
 
+
 def ensemble_test_save(ens, out_filepath, split):
     ens.load(out_filepath+TRAIN_SUFFIX, split.train)
     rec = SavedRecommendations()
     rec.save(out_filepath+TEST_SUFFIX, ens)
 
+
 def load_model(RS, out_filepath, split):
     RS.load(out_filepath+TRAIN_SUFFIX, split.train)
+
 
 def load_recommendations(filepath):
     rec = SavedRecommendations()

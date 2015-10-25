@@ -8,6 +8,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from time import time
+import gzip
+import pickle as pkl
 import smtplib
 import getpass
 from email.mime.text import MIMEText
@@ -20,6 +22,17 @@ RANDOM_SEED = 13986301
 def oneD(array):
     # TODO problably the ndarray.flatten method can do this
     return np.array(np.array(array).squeeze(), ndmin=1)
+
+
+def to_gzpickle(obj, file):
+    with gzip.open(file, 'wb') as f:
+        pkl.dump(obj, f)
+
+def read_gzpickle(file):
+    with gzip.open(file, 'rb') as f:
+        return pkl.load(f)
+
+
 
 class timing(object):
     def __init__(self):

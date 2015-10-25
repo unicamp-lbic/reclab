@@ -52,6 +52,8 @@ def main():
     parser.add_argument('--atN', help='--atN N, to use with metrics plot')
     parser.add_argument('--xaxis', help='--xaxis param_name, which param will be on x axis in a metrics plot')
 
+    parser.add_argument('--notify', action='store_true')
+
 
     args = parser.parse_args()
 
@@ -133,7 +135,8 @@ def main():
     Check for ensemble action
     will need --config, --sweep par_name=par_values, --ensemble
     '''
-    notif = Notifier(str(sys.argv))
+    if args.notify:
+        notif = Notifier(str(sys.argv))
     if args.sweep is not None and args.ensemble is not None:
         run_sweep(args, conf, exp_db, ensemble_conf)
     elif args.sweep is not None:
@@ -142,7 +145,8 @@ def main():
         run_ensemble(args, conf, ensemble_conf, exp_db)
     else:
         run_exp(args, conf, exp_db)
-    notif.notify()
+    if args.notify:
+        notif.notify()
 
 
 def set_par(par, value, conf, ensemble_conf=None):
