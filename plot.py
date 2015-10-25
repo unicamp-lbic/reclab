@@ -54,7 +54,7 @@ def plot_PR(df, metric_names,**plot_args):
 
 
     plt.errorbar(x, y, yerr, xerr,**plot_args)
-    plt.grid(which='both')
+    plt.grid('on', which='both')
     plt.ylabel('Precision')
     plt.xlabel('Recall')
 
@@ -113,7 +113,7 @@ def single_bar_plot(df, metric, **plotargs):
     plt.title(metric.replace('_', ' '), fontsize='small')
     plt.yticks(fontsize='small')
     plt.gca().get_xaxis().set_visible(False)
-    plt.grid(axis='y', which='both')
+    plt.grid('on', axis='y', which='both')
 
 
 def metrics_xaxis(exp_db, conf, sweep, value, args):
@@ -187,4 +187,4 @@ def plot_single_metric_xaxis(df, x_axis, metric, **plotargs):
     plt.yticks(fontsize='small')
     plt.xticks(fontsize='small')
     plt.xlabel(x_axis.replace('_', ' '), fontsize='small')
-    plt.grid(which='both')
+    plt.grid('on', which='both')
