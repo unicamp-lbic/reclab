@@ -34,7 +34,8 @@ def gen_mf(split, filepath, RS):
 
 
 def load_mf(filepath, RS):
-    matrices = read_gzpickle(filepath)
+    fname = filepath + MF_SUFFIX
+    matrices = read_gzpickle(fname)
     RS.load_mf(*matrices)
     return RS
 
