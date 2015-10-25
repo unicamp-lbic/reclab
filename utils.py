@@ -25,11 +25,11 @@ def oneD(array):
 
 
 def to_gzpickle(obj, file):
-    with gzip.open(file, 'wb') as f:
+    with gzip.open(file+'.gz', 'wb') as f:
         pkl.dump(obj, f)
 
 def read_gzpickle(file):
-    with gzip.open(file, 'rb') as f:
+    with gzip.open(file+'.gz', 'rb') as f:
         return pkl.load(f)
 
 
