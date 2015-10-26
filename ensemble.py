@@ -97,18 +97,11 @@ class WAvgRatingEnsemble(RatingEnsemble):
     def fit(self, split):
         self.database = split.train
         self.weights = []
-        X = []
-        Y = []
-        for user in range(self.database.n_users()):
-            ratings = self.database.get_rating_list(user)
-            for item, rating in ratings:
-              Y.append(rating)
-              predictions = [RS.predict(user, item) for RS in self.RS_list]
-              X.append(predictions)
-        X = np.array(X)
-        Y = np.array(Y, ndmin=2).T
-        errors = X-np.tile(Y,X.shape[1])
-        self.weights = 1/np.sqrt((errors*2).mean(axis=0))
+        for RS in self.RS_list:
+            metrics = evalu.Metrics(split, RS=RS)
+            metrics.def_test_set('valid')
+            metrics.error_metrics()
+            self.weights.append(1/metrics.metrics['RMSE_valid'])
         self.weights = oneD(normalize(np.array(self.weights), norm='l1'))
 
 class LinRegRatingEnsemble(RatingEnsemble):
@@ -127,13 +120,11 @@ class LinRegRatingEnsemble(RatingEnsemble):
         self.database = split.train
         X = []
         Y = []
-        for user in range(self.database.n_users()):
-            ratings = self.database.get_rating_list(user)
-            for item, rating in ratings:
+        for user, u_valid in split.valid.items():
+            for item, rating in u_valid:
               Y.append(rating)
               predictions = [RS.predict(user, item) for RS in self.RS_list]
               X.append(predictions)
-
         X = np.array(X)
         Y = np.array(Y)
         self.model.fit(X,Y)
