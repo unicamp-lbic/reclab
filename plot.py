@@ -186,7 +186,6 @@ def plot_single_metric_xaxis(df, x_axis, metric, **plotargs):
     y = [mean for mean, std in df[metric]]
     yerr = [std for mean, std in df[metric]]
     plt.errorbar(x, y, yerr, marker='o', **plotargs)
-    plt.legend(loc='best', fontsize='small', framealpha=0.5)
     plt.title(metric.replace('_', ' '), fontsize='small')
     plt.yticks(fontsize='small')
     plt.xticks(fontsize='small')
