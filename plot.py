@@ -176,6 +176,8 @@ def plot_metrics_xaxis(dataframe, x_axis, metrics,
     plt.subplots_adjust(top=0.9)
     if suptitle is not None:
         plt.suptitle(suptitle)
+    plt.legend(loc='upper left', bbox_to_anchor=(1.1, 1),
+               fontsize='x-small', framealpha=0.8)
 
 
 def plot_single_metric_xaxis(df, x_axis, metric, **plotargs):
