@@ -95,6 +95,7 @@ def bar_plot_metrics(dataframe, metrics, suptitle=None, **plotargs):
     for i, metric in enumerate(metrics):
         plt.subplot(height, width, i+1)
         single_bar_plot(dataframe, metric, **plotargs)
+
     plt.tight_layout()
     plt.subplots_adjust(top=0.9)
     if suptitle is not None:
@@ -107,12 +108,15 @@ def bar_plot_metrics(dataframe, metrics, suptitle=None, **plotargs):
 def single_bar_plot(df, metric, **plotargs):
     width = 0.7
     left = __plot_count + 0.5 * (1 - width)
-    y = height = df[metric].values[0][0]
+    y = df[metric].values[0][0]
     x = left + width/2
     yerr = df[metric].values[0][1]
-    plt.bar(left, height, width, color=colors[__plot_count], **plotargs)
+    height = yerr
+    bottom = y - 0.5 * height
+    plt.bar(left, height, width, bottom, color=colors[__plot_count], **plotargs)
     plt.errorbar(x, y, yerr, color='k')
-
+#    plt.errorbar(x, y, yerr, marker='s', markersize=6,
+#                 color=colors[__plot_count], **plotargs)
     plt.title(metric.replace('_', ' '), fontsize='small')
     plt.yticks(fontsize='small')
     plt.gca().get_xaxis().set_visible(False)
