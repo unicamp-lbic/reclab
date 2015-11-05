@@ -388,6 +388,8 @@ def run_plot(args, exp_db):
     else:
         raise ValueError('At least one config is necessary')
 
+    plot_name = [args.type] + ([args.xaxis] if args.xaxis is not None else [])
+
     for conf_arg, sweep_args in iterable:
         '''
         Try to load configuration settings
@@ -412,6 +414,9 @@ def run_plot(args, exp_db):
         plot
         '''
         sweep_plot(sweep_args, conf, exp_db, args)
+
+        plot_name += [conf_arg, sweep_args]
+
 
     if args.ensemble is not None:
         '''
@@ -450,6 +455,11 @@ def run_plot(args, exp_db):
         sweep_args = args.sweep[0]
         sweep_plot(sweep_args, conf, exp_db, args)
 
+        plot_name += [args.ensemble+'Ens', args.sweep[0],
+                      args.config[0], args.varpar]
+
+    plot_name = '-'.join(plot_name)
+    plt.savefig('./results/' + plot_name + '.png')
     plt.show()
 
 def sweep_plot(sweep_args, conf, exp_db, args):

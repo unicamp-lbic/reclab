@@ -99,7 +99,9 @@ def bar_plot_metrics(dataframe, metrics, suptitle=None, **plotargs):
     if suptitle is not None:
         plt.suptitle(suptitle)
     __plot_count += 1
-
+    if __plot_count >= len(metrics):
+        plt.legend(loc='upper left', bbox_to_anchor=(1.1, 1),
+                   fontsize='x-small', framealpha=0.8)
 
 def single_bar_plot(df, metric, **plotargs):
     width = 0.7
@@ -109,7 +111,7 @@ def single_bar_plot(df, metric, **plotargs):
     yerr = df[metric].values[0][1]
     plt.bar(left, height, width, color=colors[__plot_count], **plotargs)
     plt.errorbar(x, y, yerr, color='k')
-    plt.legend(loc='lower right', fontsize='x-small', framealpha=0.8)
+
     plt.title(metric.replace('_', ' '), fontsize='small')
     plt.yticks(fontsize='small')
     plt.gca().get_xaxis().set_visible(False)
