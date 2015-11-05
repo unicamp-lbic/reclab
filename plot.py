@@ -80,8 +80,9 @@ def metrics(exp_db, conf, sweep, value, args):
     RS_name = conf.get_name()
     bar_plot_metrics(df, metric_names,
                      label=RS_name+' '+sweep.replace('_',' ')+'='+str(value))
-    plt.autoscale()
 
+    plt.legend(loc='upper left', bbox_to_anchor=(1,1), borderaxespad=2.0,
+               fontsize='x-small', framealpha=0.8)
 
 # static
 __plot_count = 0
@@ -101,9 +102,7 @@ def bar_plot_metrics(dataframe, metrics, suptitle=None, **plotargs):
     if suptitle is not None:
         plt.suptitle(suptitle)
     __plot_count += 1
-    if __plot_count >= len(metrics):
-        plt.legend(loc='upper left', bbox_to_anchor=(1.1, 1),
-                   fontsize='x-small', framealpha=0.8)
+
 
 def single_bar_plot(df, metric, **plotargs):
     width = 0.7
