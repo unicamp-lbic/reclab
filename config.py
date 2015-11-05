@@ -29,13 +29,18 @@ class BaseConfig(object):
         pass
 
     def set_par(self, par, value):
-        try:
-            value = int(value)
-        except ValueError:
+        if value == 'True':
+            value = True
+        elif value == 'False':
+            value = False
+        else:
             try:
-                value = float(value)
+                value = int(value)
             except ValueError:
-                pass
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass
         try:
             self.__getattribute__(par)
             self.__setattr__(par, value)
@@ -239,7 +244,7 @@ BMFRPLSH5fold = Config(
     database='ml100k',
     RS_type=rec.BMFRPrecommender,
     RS_args={'RP_type': 'sparse',
-             'dim_red': 0.8,
+             'dim_red': 0.5,
              'n_neighbors': 20,
              'model_size': 30,
              'neighbor_type': 'user',
@@ -274,6 +279,7 @@ Dictionary of valid configuration settings
 valid_configs = {
     'BMF5fold': BMF5fold,
     'BMFLSH5fold': BMFLSH5fold,
+    'BMFRPLSH5fold': BMFRPLSH5fold,
     'BMFRP5fold': BMFRP5fold,
     'IB5fold': IB5fold,
     'dummy5fold': dummy5fold,
