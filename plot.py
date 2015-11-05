@@ -57,6 +57,7 @@ def plot_PR(df, metric_names,**plot_args):
     plt.grid('on', which='both')
     plt.ylabel('Precision')
     plt.xlabel('Recall')
+    plt.legend(loc='best', fontsize='x-small', framealpha=0.8)
 
 def metrics(exp_db, conf, sweep, value, args):
     if args.atN is None:
