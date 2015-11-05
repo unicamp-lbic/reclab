@@ -95,7 +95,7 @@ def main():
     Try to load configuration settings
     '''
     try:
-        conf = config.valid_configs[args.config[0]]
+        conf = config.valid_configs[args.config[0]].copy()
     except KeyError:
         raise KeyError('Invalid configuration setting')
 
@@ -104,7 +104,7 @@ def main():
     '''
     if args.ensemble is not None:
         try:
-            ensemble_conf = config.valid_ensemble_configs[args.ensemble]
+            ensemble_conf = config.valid_ensemble_configs[args.ensemble].copy()
         except KeyError:
             raise KeyError('Invalid ensemble configuration setting')
 
@@ -395,7 +395,7 @@ def run_plot(args, exp_db):
         Try to load configuration settings
         '''
         try:
-            conf = config.valid_configs[conf_arg]
+            conf = config.valid_configs[conf_arg].copy()
         except KeyError:
             raise KeyError('Invalid configuration setting')
         '''
@@ -423,7 +423,7 @@ def run_plot(args, exp_db):
         Ensemble part
         '''
         try:
-            ensemble_conf = config.valid_ensemble_configs[args.ensemble]
+            ensemble_conf = config.valid_ensemble_configs[args.ensemble].copy()
         except:
             raise KeyError('Invalid configuration setting')
         '''

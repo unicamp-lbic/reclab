@@ -12,7 +12,7 @@ import recommender as rec
 import ensemble as ens
 import pandas as pd
 import data
-
+from copy import deepcopy
 
 class BaseConfig(object):
     __metaclass__ = abc.ABCMeta
@@ -27,6 +27,9 @@ class BaseConfig(object):
     @abc.abstractmethod
     def _set_internal_args(self, par, value):
         pass
+
+    def copy(self):
+        return deepcopy(self)
 
     def set_par(self, par, value):
         if value == 'True':
