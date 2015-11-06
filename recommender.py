@@ -85,12 +85,12 @@ class DummyRecommender(RatingPredictor):
 
 
 class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
-    def __init__(self, n_neighbors=10, algorithm='brute', model_size=30,
+    def __init__(self, n_neighbors=10, algorithm='brute', model_size=0.8,
                  metric='cosine', offline_kNN=True, weighting='none',
                  **kNN_args):
         self.database = None
         self.n_neighbors = n_neighbors
-        self.model_size = model_size * n_neighbors
+        self.model_size = model_size
         self.weighting = weighting
         self.metric = 'cosine'
         self.offline_kNN = offline_kNN
@@ -98,6 +98,8 @@ class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
                                  algorithm=algorithm, metric=metric, **kNN_args)
 
     def fit(self, database):
+        self.model_size = int(np.ceil(self.model_size * database.n_items()))
+        self.kNN.estimator.n_neighbors = self.model_size
         self.database = database
         if self.offline_kNN:
             matrix, user_means = self.database.get_matrix(zero_mean=True,
@@ -206,7 +208,7 @@ class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
     def __init__(self, neighbor_type='user', offline_kNN=False,
                  bin_threshold=0, min_coverage=1.0, weighting='none',
                  n_neighbors=10, algorithm='brute', metric='cosine',
-                 model_size=30, **kNN_args):
+                 model_size=0.8, **kNN_args):
         self.database = None
         self.weighting = weighting
         self.metric = metric
@@ -216,17 +218,19 @@ class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
         self.P = None
         self.Q = None
         self.n_neighbors = n_neighbors
-
-        if offline_kNN:
-            self.model_size = model_size * n_neighbors
-        else:
-            self.model_size = n_neighbors
-
+        self.model_size = model_size
+        # create a random seed that will be the same for a certain BMF,
+        # to allow fair comparisons among other params
+        self.seed = int(str(min_coverage).replace('.','') \
+            + str(bin_threshold)) + RANDOM_SEED
+        np.random.RandomState(self.seed)
         self.kNN = \
-            neighbors.kNN(n_neighbors=self.model_size,
+            neighbors.kNN(n_neighbors=n_neighbors,
                           algorithm=algorithm, metric=metric, **kNN_args)
         self.offline_kNN = offline_kNN
         self.kNN_graph = None
+
+
 
     def transform(self, user_vector):
         raise NotImplementedError()
@@ -275,8 +279,12 @@ class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
 
         if self.offline_kNN:
             if self.neighbor_type == 'user':
+                self.model_size = int(np.ceil(self.model_size * database.n_users()))
+                self.kNN.estimator.n_neighbors = self.model_size
                 self.kNN.fit(self.P, keepgraph=True)
             elif self.neighbor_type == 'item':
+                self.model_size = int(np.ceil(self.model_size * database.n_items()))
+                self.kNN.estimator.n_neighbors = self.model_size
                 self.kNN.fit(self.Q, keepgraph=True)
             else:
                 raise ValueError('Invalid neighbor_type "%s" parameter passed \
@@ -345,10 +353,6 @@ class BMFRPrecommender(BMFrecommender):
         BMFrecommender.__init__(self, **BMF_args)
         self.dim_red = dim_red
         self.RP = RP_type
-        # create a random seed that will be the same for a certain BMF,
-        # to allow fair comparisons among othre params
-        self.seed = int(str(BMF_args['min_coverage']).replace('.','') \
-            + str(BMF_args['bin_threshold'])) + RANDOM_SEED
 
     def transform(self, user_vector):
         new_vec = BMFrecommender.transform(self, user_vector)
@@ -377,6 +381,7 @@ class BMFRPrecommender(BMFrecommender):
         elif self.RP == 'sparse':
             self.RP = SparseRandomProjection(n_components=n_components)
 
+        np.random.RandomState(self.seed)
         if self.neighbor_type == 'user':
             self.P = self.RP.fit_transform(self.P)
             if self.offline_kNN:
