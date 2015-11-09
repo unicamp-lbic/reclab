@@ -4,7 +4,7 @@ Created on Mon Apr  6 16:34:16 2015
 
 @author: thalita
 """
-import pyximport; pyximport.install()
+#import pyximport; pyximport.install()
 import numpy as np
 import scipy.sparse as sp
 import time
