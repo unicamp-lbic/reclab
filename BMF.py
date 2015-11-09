@@ -69,7 +69,7 @@ def _test():
     print(factors)
     M = bool_dot(P, Q.T)
     assert((M == matrix).all())
-
+    '''
     t0 = time.time()
     sparse_mat = sp.lil_matrix(matrix)
     factors = bmf(sparse_mat)
@@ -78,7 +78,7 @@ def _test():
     print(factors)
     M = bool_dot(P, Q.T)
     assert((M == matrix).all())
-
+    '''
 
     print(P)
     print(Q.T)
@@ -93,7 +93,7 @@ def _large_test():
     M = bool_dot(P, Q.T)
     assert((M == matrix).all())
     print(P.shape)
-
+    '''
     t0 = time.time()
     sparse_mat = sp.lil_matrix(matrix)
     factors = bmf(sparse_mat)
@@ -101,5 +101,6 @@ def _large_test():
     print('time:', time.time()-t0)
     M = bool_dot(P, Q.T)
     assert((M == matrix).all())
+    '''
 
 _test()
