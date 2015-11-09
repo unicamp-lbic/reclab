@@ -101,6 +101,7 @@ def _large_test():
     print('time:', time.time()-t0)
     M = bool_dot(P, Q.T)
     assert((M == matrix).all())
-    '''
 
-_test()
+    '''
+if __name__=='__main__':
+    _test()
