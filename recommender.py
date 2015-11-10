@@ -9,11 +9,13 @@ from base import RatingPredictor
 import abc
 import neighbors
 from BMF import BMF
+from mf import SVD
 import numpy as np
 from utils import oneD, RANDOM_SEED
 from sklearn.random_projection import GaussianRandomProjection,\
                                       SparseRandomProjection
 from sklearn.feature_extraction.text import TfidfTransformer
+
 
 class NeighborStrategy(object):
     __metaclass__ = abc.ABCMeta
@@ -72,16 +74,19 @@ class PredictionStrategy(object):
 class DummyRecommender(RatingPredictor):
     def __init__(self):
         self.user_means = []
+        self.item_means = []
         self.database = None
 
     def fit(self, database):
         self.database = database
-        matrix, user_means = self.database.get_matrix(zero_mean=True,
+        matrix, means = self.database.get_matrix(zero_mean='useritems',
                                                       sparse=True)
-        self.user_means = user_means
+        self.user_means = means['users']
+        self.item_means = means['useritems']
+
 
     def predict(self, target_user, target_item):
-        return self.user_means[target_user]
+        return self.user_means[target_user] + self.user_item[target_item]
 
 
 class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
@@ -102,7 +107,7 @@ class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
         self.kNN.estimator.n_neighbors = self.model_size
         self.database = database
         if self.offline_kNN:
-            matrix, user_means = self.database.get_matrix(zero_mean=True,
+            matrix, user_means = self.database.get_matrix(zero_mean='users',
                                                           sparse=True)
             self.kNN.fit(matrix.T, keepgraph=True)
         return self
@@ -117,8 +122,8 @@ class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
                 self.kNN.kneighbors(target_item, n_neighbors=n_neighbors,
                                     filter=rated_items)
         else:
-            matrix, user_means = self.database.get_matrix(zero_mean=True)
-            item_vector = self.database.get_item_vector(target_item, zero_mean=True)
+            matrix, user_means = self.database.get_matrix(zero_mean='users')
+            item_vector = self.database.get_item_vector(target_item, zero_mean='users')
             self.kNN.fit(matrix[:, rated_items].T)
             distances, indices = \
                 self.kNN.kneighbors(item_vector, n_neighbors=n_neighbors)
@@ -149,7 +154,7 @@ class UserBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
     def fit(self, database):
         self.database = database
         if self.offline_kNN:
-            matrix, user_means = database.get_matrix(zero_mean=True,
+            matrix, means = database.get_matrix(zero_mean='users',
                                                      sparse=True)
             self.kNN.estimator.n_neighbors = matrix.shape[1]
             self.kNN.fit(matrix, keepgraph=True)
@@ -164,9 +169,9 @@ class UserBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
                 self.kNN.kneighbors(target_user, n_neighbors=self.n_neighbors,
                                 filter=user_indices)
         else:
-            matrix, user_means = self.database.get_matrix(zero_mean=True)
+            matrix, user_means = self.database.get_matrix(zero_mean='users')
             self.kNN.fit(matrix[user_indices, :])
-            user_vector = self.database.get_user_vector(target_user, zero_mean=True)
+            user_vector = self.database.get_user_vector(target_user, zero_mean='users')
             n_neighbors = min(self.n_neighbors, len(user_indices))
             distances, indices = \
                 self.kNN.kneighbors(user_vector, n_neighbors)
@@ -182,7 +187,7 @@ class UserBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
         return self._predict(ratings, similarities)
 
 
-class MFrecomender(RatingPredictor):
+class MFrecommender(RatingPredictor):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractclassmethod
@@ -198,7 +203,7 @@ class MFrecomender(RatingPredictor):
         pass
 
 
-class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
+class BMFrecommender(MFrecommender, NeighborStrategy, PredictionStrategy):
     __MF_type__ = BMF
 
     def __MF_args__(RS_args):
@@ -229,8 +234,6 @@ class BMFrecommender(MFrecomender, NeighborStrategy, PredictionStrategy):
                           algorithm=algorithm, metric=metric, **kNN_args)
         self.offline_kNN = offline_kNN
         self.kNN_graph = None
-
-
 
     def transform(self, user_vector):
         raise NotImplementedError()
@@ -395,3 +398,40 @@ class BMFRPrecommender(BMFrecommender):
             raise ValueError('Invalid neighbor_type parameter passed to\
                              constructor')
         return self
+
+class SVDrecommender(MFrecommender):
+    __MF_type__ = SVD
+
+    def __MF_args__(RS_args):
+        args = ['dim', 'regularization']
+        return dict([(arg, RS_args[arg]) for arg in args])
+
+
+    def __init__(self, dim=50, regularization=0.1):
+        self.database = None
+        self.P = None
+        self.Q = None
+        self.user_means = None
+        self.item_means = None
+        self.dim = dim
+        self.regularization = regularization
+
+    def fit(self, database):
+        if self.P is None or self.Q is None:
+            ratings = []
+            n_users = database.n_users()
+            n_items = database.n_items()
+            for user in range(n_users):
+                ratings += self.database.get_rating_list(user, zero_mean='useritems')
+            self.user_means = database.means['users']
+            self.item_means = database.means['useritems']
+            model = mf(ratings, n_users, n_items, self.dim, self.regularization)
+            model.optimize()
+            self.P = model.users
+            self.Q = model.items
+
+    def predict(self, target_user, target_item):
+        u_mean = self.user_means[target_user]
+        i_mean = self.item_means[target_item]
+        return np.dot(self.P[target_user, :], self.Q[target_item, :]) \
+            + u_mean + i_mean

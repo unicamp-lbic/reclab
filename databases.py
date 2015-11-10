@@ -35,7 +35,7 @@ def _get_zero_mean_matrix(matrix, along='users'):
             matrix = sp.csc_matrix(matrix, dtype=np.float)
         else:
             matrix = np.array(matrix, dtype=np.float)
-        mean_vals = np.zeros(rows)
+        mean_vals = np.zeros(cols)
         for i in range(cols):
             if sp.issparse(matrix):
                 mean = np.mean(matrix[:, i].data)
@@ -68,11 +68,19 @@ class MatrixDatabase(BaseDatabase):
         self.zero_mean_matrix_csc = None
         self.zero_mean_matrix_dok = None
 
-        self.user_means = None
+        self.means = {}
 
     def _compute_zero_mean(self):
-        self.zero_mean_matrix, self.user_means = \
-                    _get_zero_mean_matrix(self.matrix.copy())
+        self.zero_mean_matrix = {}
+        self.zero_mean_matrix['users'], self.means['users'] = \
+            _get_zero_mean_matrix(self.matrix.copy(), along='users')
+        self.zero_mean_matrix['items'], self.means['items'] = \
+            _get_zero_mean_matrix(self.matrix.copy(), along='items')
+        self.zero_mean_matrix['useritems'], self.means['useritems'] = \
+            _get_zero_mean_matrix(self.zero_mean_matrix['users'].copy(), along='items')
+        for name in ['users', 'items', 'useritems']:
+            self.zero_mean_matrix_csc[name] = self.zero_mean_matrix[name].tocsc()
+            self.zero_mean_matrix_dok[name] = self.zero_mean_matrix[name].todok()
 
     def n_users(self):
         return self.matrix.shape[0]
@@ -98,14 +106,10 @@ class MatrixDatabase(BaseDatabase):
         elif zero_mean:
             if self.zero_mean_matrix is None:
                 self._compute_zero_mean()
-            if sp.issparse(self.matrix):
-                if sparse:
-                    return self.zero_mean_matrix, self.user_means
-                else:
-                    return self.zero_mean_matrix.toarray(), self.user_means
+            if sp.issparse(self.matrix) and not sparse:
+                return self.zero_mean_matrix[zero_mean].toarray(), self.means
             else:
-                return self.zero_mean_matrix, self.user_means
-
+                return self.zero_mean_matrix[zero_mean], self.means
         else:
             if sp.issparse(self.matrix):
                 if sparse:
@@ -120,11 +124,9 @@ class MatrixDatabase(BaseDatabase):
             if self.zero_mean_matrix is None:
                 self._compute_zero_mean()
             if sp.issparse(self.matrix):
-                if self.zero_mean_matrix_dok is None:
-                    self.zero_mean_matrix_dok = self.zero_mean_matrix.todok()
-                return self.zero_mean_matrix_dok[user_id, item_id]
+                return self.zero_mean_matrix_dok[zero_mean][user_id, item_id]
             else:
-                return self.zero_mean_matrix[user_id, item_id]
+                return self.zero_mean_matrix[zero_mean][user_id, item_id]
         else:
             if sp.issparse(self.matrix):
                 if self.matrix_dok is None:
@@ -138,7 +140,7 @@ class MatrixDatabase(BaseDatabase):
             if self.zero_mean_matrix is None:
                 self._compute_zero_mean()
 
-            vector = self.zero_mean_matrix[user_id, :]
+            vector = self.zero_mean_matrix[zero_mean][user_id, :]
         else:
             vector = BaseDatabase.get_user_vector(self, user_id)
 
@@ -147,13 +149,18 @@ class MatrixDatabase(BaseDatabase):
         else:
             return vector
 
-    def get_rating_list(self, user_id):
+    def get_rating_list(self, user_id, zero_mean=False):
         if sp.issparse(self.matrix):
-            ratings = self.matrix[user_id, :].data.tolist()
+            if zero_mean:
+                if self.zero_mean_matrix is None:
+                    self._compute_zero_mean()
+                ratings = self.zero_mean_matrix[user_id, :].data.tolist()
+            else:
+                ratings = self.matrix[user_id, :].data.tolist()
             items = self.matrix[user_id, :].indices.tolist()
             alist = list(zip(ratings, items))
         else:
-            vector = self.get_user_vector(user_id)
+            vector = self.get_user_vector(user_id, zero_mean)
             alist = [(r, i) for i, r in enumerate(vector) if r != 0]
         alist.sort()
         return [(i, r) for r, i in alist]
@@ -163,14 +170,12 @@ class MatrixDatabase(BaseDatabase):
             if self.zero_mean_matrix is None:
                 self._compute_zero_mean()
             if sp.issparse(self.matrix):
-                if self.zero_mean_matrix_csc is None:
-                    self.zero_mean_matrix_csc = self.zero_mean_matrix.tocsc()
                 if sparse:
-                    self.zero_mean_matrix_csc[:, item_id]
+                    self.zero_mean_matrix_csc[zero_mean][:, item_id]
                 else:
-                    return oneD(self.zero_mean_matrix_csc[:, item_id].toarray())
+                    return oneD(self.zero_mean_matrix_csc[zero_mean][:, item_id].toarray())
             else:
-                return self.zero_mean_matrix[:, item_id]
+                return self.zero_mean_matrix_csc[zero_mean][:, item_id]
         else:
             if sp.issparse(self.matrix):
                 if self.matrix_csc is None:
@@ -216,13 +221,17 @@ def _test_sparse_matrixdb():
     sdb = MatrixDatabase(sm)
     db = MatrixDatabase(m)
     assert((db.get_matrix() == sdb.get_matrix()).all())
-    assert((db.get_matrix(zero_mean=True)[0] == sdb.get_matrix(zero_mean=True)[0]).all())
-    assert((db.get_matrix(zero_mean=True)[1] == sdb.get_matrix(zero_mean=True)[1]).all())
+    assert((db.get_matrix(zero_mean='users')[0] == sdb.get_matrix(zero_mean='users')[0]).all())
+    assert((db.get_matrix(zero_mean='items')[0] == sdb.get_matrix(zero_mean='items')[0]).all())
+    assert((db.get_matrix(zero_mean='users')[1] == sdb.get_matrix(zero_mean='users')[1]).all())
+    assert((db.get_matrix(zero_mean='items')[1] == sdb.get_matrix(zero_mean='items')[1]).all())
     assert((db.get_matrix(threshold=0)==sdb.get_matrix(threshold=0)).all())
     assert((db.get_rating(5,30)==sdb.get_rating(5,30)).all())
-    assert((db.get_rating(5,30,zero_mean=True)==sdb.get_rating(5,30,zero_mean=True)).all())
+    assert((db.get_rating(5,30,zero_mean='users')==sdb.get_rating(5,30,zero_mean='users')).all())
+    assert((db.get_rating(5,30,zero_mean='items')==sdb.get_rating(5,30,zero_mean='items')).all())
     assert((db.get_user_vector(5)==sdb.get_user_vector(5)).all())
-    assert((db.get_user_vector(5,zero_mean=True)==sdb.get_user_vector(5,zero_mean=True)).all())
+    assert((db.get_user_vector(5,zero_mean='users')==sdb.get_user_vector(5,zero_mean='users')).all())
+    assert((db.get_user_vector(5,zero_mean='items')==sdb.get_user_vector(5,zero_mean='items')).all())
     assert((db.get_item_vector(5)==sdb.get_item_vector(5)).all())
     assert(db.get_unrated_items(5)==sdb.get_unrated_items(5))
     assert(db.get_rated_items(5)==sdb.get_rated_items(5))
