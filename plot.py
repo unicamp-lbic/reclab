@@ -59,6 +59,27 @@ def plot_PR(df, metric_names,**plot_args):
     plt.xlabel('Recall')
     plt.legend(loc='best', fontsize='x-small', framealpha=0.8)
 
+
+def time_plot(exp_db, conf, sweep, value, args):
+    if args.set is None:
+        raise ValueError('must inform --set valid|test')
+    metric_names = ['train_time','test_time']
+    select = conf.as_dict()
+    ids = exp_db.get_ids_dict(select)
+    if ids is None:
+        raise RuntimeError('No corresponding metrics available')
+    df = get_xy(ids, exp_db, metric_names)
+    if len(df) is 0:
+        raise RuntimeError('No corresponding metrics available')
+    RS_name = conf.get_name()
+    bar_plot_metrics(df, metric_names,
+                     label=RS_name+' '+sweep.replace('_',' ')+'='+str(value))
+
+    plt.legend(loc='upper left', bbox_to_anchor=(1,1), borderaxespad=2.0,
+               fontsize='x-small', framealpha=0.8)
+
+
+
 def metrics(exp_db, conf, sweep, value, args):
     if args.atN is None:
         raise ValueError('must inform --atN N')
@@ -158,8 +179,13 @@ def get_xy(ids, exp_db, metric_names, x_axis=None):
         if x_axis is not None:
             x_values.append(df[x_axis].values[0])
         for metric in metric_names:
-            metric_values[metric].append(
-                (df[metric].values.mean(), df[metric].values.std()))
+            if metric is 'train_time' and df['is_MF'].values[0]:
+                total_time = df[metric].values + df['MF_time'].values
+                metric_values[metric].append(
+                    (total_time.mean(), total_time.std()))
+            else:
+                metric_values[metric].append(
+                    (df[metric].values.mean(), df[metric].values.std()))
     # at this point there is a list of points for every metric
     # and a list of x_values
     if x_axis is not None:

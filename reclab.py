@@ -479,5 +479,8 @@ def sweep_plot(sweep_args, conf, exp_db, args):
         elif args.type == 'PR':
             plot.PR_curve(exp_db, conf, sweep, v, args)
 
+        elif args.type == 'time':
+            plot.time_plot(exp_db, conf, sweep, v, args)
+
 if __name__=='__main__':
     main()
