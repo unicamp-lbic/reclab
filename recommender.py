@@ -21,11 +21,11 @@ class NeighborStrategy(object):
     __metaclass__ = abc.ABCMeta
 
     def _item_strategy(self, target_user, distances, indices,
-                       zero_mean):
+                       zero_mean=False):
         indices = oneD(indices)
         distances = oneD(distances)
         if np.isscalar(target_user):
-            ratings = np.array([self.database.get_rating(target_user, item)
+            ratings = np.array([self.database.get_rating(target_user, item, zero_mean)
                                 for item in indices])
         else:
             ratings = np.array([target_user[item]
@@ -39,10 +39,10 @@ class NeighborStrategy(object):
         return (ratings, similarities)
 
     def _user_strategy(self, target_item, distances, indices,
-                       zero_mean):
+                       zero_mean=False):
         indices = oneD(indices)
         distances = oneD(distances)
-        ratings = np.array([self.database.get_rating(user, target_item)
+        ratings = np.array([self.database.get_rating(user, target_item, zero_mean)
                             for user in indices], ndmin=1)
 
         if self.metric == 'cosine':
@@ -56,7 +56,7 @@ class NeighborStrategy(object):
 class PredictionStrategy(object):
     __metaclass__ = abc.ABCMeta
 
-    def _predict(self, ratings, similarities, zero_mean=False):
+    def _predict(self, ratings, similarities, target=None, zero_mean=False):
         if (ratings == 0).all():
             #print('All user ratings on neighbor items are zero')
             pred_rating = 0
@@ -66,6 +66,8 @@ class PredictionStrategy(object):
             denominator = similarities[ratings > 0].sum()
             if denominator != 0:
                 pred_rating = np.dot(ratings, similarities)/denominator
+                if zero_mean:
+                    pred_rating += self.database.get_means(zero_mean)[target]
             else:
                 pred_rating = 0
         return pred_rating
@@ -134,9 +136,10 @@ class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
 
         ratings, similarities = \
             self._item_strategy(target_user, distances, indices,
-                                zero_mean=False)
+                                zero_mean='items')
 
-        return self._predict(ratings, similarities)
+        return self._predict(ratings, similarities,
+                             target_item, zero_mean='items')
 
 
 class UserBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
@@ -182,9 +185,9 @@ class UserBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
 
         ratings, similarities = \
             self._user_strategy(target_item, distances, indices,
-                                zero_mean=False)
+                                zero_mean='users')
 
-        return self._predict(ratings, similarities)
+        return self._predict(ratings, similarities, target_user, zero_mean='users')
 
 
 class MFrecommender(RatingPredictor):
@@ -406,32 +409,29 @@ class SVDrecommender(MFrecommender):
         args = ['dim', 'regularization']
         return dict([(arg, RS_args[arg]) for arg in args])
 
-
     def __init__(self, dim=50, regularization=0.1):
         self.database = None
         self.P = None
         self.Q = None
-        self.user_means = None
-        self.item_means = None
         self.dim = dim
         self.regularization = regularization
 
+    def gen_mf(self, database):
+        ratings = []
+        n_users = database.n_users()
+        n_items = database.n_items()
+        for user in range(n_users):
+            ratings += [(user, i, r) for i, r in
+                        database.get_rating_list(user, zero_mean=False)]
+        model = SVD(ratings, n_users, n_items, self.dim, self.regularization)
+        model.optimize()
+        self.P = model.users
+        self.Q = model.items
+        return self.P, self.Q
+
     def fit(self, database):
         if self.P is None or self.Q is None:
-            ratings = []
-            n_users = database.n_users()
-            n_items = database.n_items()
-            for user in range(n_users):
-                ratings += self.database.get_rating_list(user, zero_mean='useritems')
-            self.user_means = database.means['users']
-            self.item_means = database.means['useritems']
-            model = mf(ratings, n_users, n_items, self.dim, self.regularization)
-            model.optimize()
-            self.P = model.users
-            self.Q = model.items
+            self.gen_mf(database)
 
     def predict(self, target_user, target_item):
-        u_mean = self.user_means[target_user]
-        i_mean = self.item_means[target_item]
-        return np.dot(self.P[target_user, :], self.Q[target_item, :]) \
-            + u_mean + i_mean
+        return np.dot(self.P[target_user, :], self.Q[target_item, :])

@@ -265,6 +265,17 @@ BMFRPLSH5fold = Config(
     pct_hidden=0.2
 )
 
+SVD5fold = Config(
+    database='ml100k',
+    RS_type=rec.SVDrecommender,
+    RS_args={'dim': 50,
+             'regularization': 0.1},
+    nfolds=5,
+    is_MF=True,
+    threshold=3,
+    pct_hidden=0.2
+)
+
 WAvg = EnsembleConfig(
     Ens_type=ens.WAvgRatingEnsemble,
     Ens_args={}
@@ -286,7 +297,8 @@ valid_configs = {
     'BMFRP5fold': BMFRP5fold,
     'IB5fold': IB5fold,
     'dummy5fold': dummy5fold,
-    'UB5fold': UB5fold
+    'UB5fold': UB5fold,
+    'SVD5fold': SVD5fold
 }
 
 valid_ensemble_configs = {

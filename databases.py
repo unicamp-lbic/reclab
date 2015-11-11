@@ -83,6 +83,11 @@ class MatrixDatabase(BaseDatabase):
                 self.zero_mean_matrix_csc[name] = self.zero_mean_matrix[name].tocsc()
                 self.zero_mean_matrix_dok[name] = self.zero_mean_matrix[name].todok()
 
+    def get_means(self, along):
+        if self.zero_mean_matrix is None:
+            self._compute_zero_mean()
+        return self.means[along]
+
     def n_users(self):
         return self.matrix.shape[0]
 
