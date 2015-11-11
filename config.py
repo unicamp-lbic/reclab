@@ -229,7 +229,7 @@ BMFRP5fold = Config(
     RS_args={'RP_type': 'sparse',
              'dim_red': 0.5,
              'n_neighbors': 20,
-             'model_size': 30,
+             'model_size': 1.0,
              'neighbor_type': 'user',
              'algorithm': 'brute',
              'metric': 'cosine',
