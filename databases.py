@@ -78,9 +78,10 @@ class MatrixDatabase(BaseDatabase):
             _get_zero_mean_matrix(self.matrix.copy(), along='items')
         self.zero_mean_matrix['useritems'], self.means['useritems'] = \
             _get_zero_mean_matrix(self.zero_mean_matrix['users'].copy(), along='items')
-        for name in ['users', 'items', 'useritems']:
-            self.zero_mean_matrix_csc[name] = self.zero_mean_matrix[name].tocsc()
-            self.zero_mean_matrix_dok[name] = self.zero_mean_matrix[name].todok()
+        if sp.issparse(self.matrix):
+            for name in ['users', 'items', 'useritems']:
+                self.zero_mean_matrix_csc[name] = self.zero_mean_matrix[name].tocsc()
+                self.zero_mean_matrix_dok[name] = self.zero_mean_matrix[name].todok()
 
     def n_users(self):
         return self.matrix.shape[0]
