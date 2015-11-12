@@ -133,7 +133,7 @@ def single_bar_plot(df, metric, **plotargs):
     yerr = df[metric].values[0][1]
     height = yerr
     bottom = y - 0.5 * height
-    plt.bar(left, height, width, bottom, color=colors[__plot_count], **plotargs)
+    plt.bar(left, height, width, bottom, color=colors[__plot_count % len(colors)], **plotargs)
     plt.errorbar(x, y, yerr, marker='+', color='k')
 #    plt.errorbar(x, y, yerr, marker='s', markersize=6,
 #                 color=colors[__plot_count], **plotargs)
