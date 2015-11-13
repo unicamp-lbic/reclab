@@ -256,7 +256,7 @@ BMFRPLSH5fold = Config(
              'min_coverage': 1.0,
              'bin_threshold': 3,
              'offline_kNN': True,
-             'weighting': 'tf-idf',
+             'weighting': 'none',
              'n_estimators': 10,
              'n_candidates': 2},
     nfolds=5,
