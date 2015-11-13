@@ -7,6 +7,7 @@ Created on Mon Sep 14 17:58:04 2015
 import numpy as np
 import pickle as pkl
 from base import SavedRecommendations
+from databases import MatrixDatabase
 from datasplit import Split
 from utils import to_gzpickle, read_gzpickle
 
