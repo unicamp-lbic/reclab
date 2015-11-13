@@ -287,8 +287,16 @@ LinReg = EnsembleConfig(
               'l1_ratio': 0.5  }
 )
 
+Voting = EnsembleConfig(
+    Ens_type=ens.MajorityEnsemble,
+    Ens_args={})
+
+RankSum = EnsembleConfig(
+    Ens_type=ens.RankSumEnsemble,
+    Ens_args={})
+
 '''
-Dictionary of valid configuration settings
+Dictionaries of valid configuration settings
 '''
 valid_configs = {
     'BMF5fold': BMF5fold,
@@ -303,5 +311,8 @@ valid_configs = {
 
 valid_ensemble_configs = {
     'WAvg': WAvg,
-    'LinReg': LinReg
+    'LinReg': LinReg,
+    'Voting': Voting,
+    'RankSum': RankSum
+
 }
