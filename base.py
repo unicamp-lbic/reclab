@@ -95,6 +95,13 @@ class BaseRecommender(object):
             self.__setattr__(atr, val)
         self.database = database
 
+    def is_ensemble(self):
+        return False
+
+    def config(self):
+        return {'n_users': self.database.n_users(),
+                'n_items': self.database.n_items()}
+
 class RatingPredictor(BaseRecommender):
     __metaclass__ = abc.ABCMeta
 
@@ -143,8 +150,7 @@ class SavedRecommendations(RatingPredictor):
             # ask for recommendations w/ threshold=0
             # to get all the predratings
             lists[user] = RS.recommend(user, threshold=0)
-            config = {'n_users': RS.database.n_users(),
-                      'n_items': RS.database.n_items()}
+            config = RS.config()
         to_gzpickle((lists, config), filepath)
 
     def load(self, filepath):
@@ -175,22 +181,4 @@ class SavedRecommendations(RatingPredictor):
             out_list = self.lists[target_user]
         return out_list
 
-
-class BaseEnsemble(BaseRecommender):
-    __metaclass__ = abc.ABCMeta
-
-    @property
-    def RS_list(self):
-        "list of recommenders used by the ensemble"
-        return self._RS_list
-
-    @RS_list.setter
-    def RS_list(self, val):
-        self._RS_list = val
-
-    @abc.abstractmethod
-    def fit(self, database, **varargs):
-        "learn recommender model (neighborhood, matrix factorization, etc)"
-        self.database = database
-        return self
 

@@ -356,6 +356,7 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
             metrics.def_test_set(args.set)
             metrics.error_metrics()
             metrics.list_metrics(conf.threshold)
+            metrics.ensemble_metrics()
             for arg, val in metrics.metrics.items():
                 exp_db.set_fold_arg_val(EXP_ID, fold, arg, val)
 

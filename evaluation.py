@@ -86,6 +86,9 @@ class Metrics(object):
         return ['RMSE'+('u' if user else '')+ '_' + which,
                 'MAE'+('u' if user else '') + '_' + which]
 
+    def ensemble_metrics_names():
+        return ['kendalltau', 'stddev']
+
     def __init__(self, split, filepath=None, RS=None):
         self.RS = SavedRecommendations()
         if RS is not None:
@@ -185,3 +188,12 @@ class Metrics(object):
         self.metrics['MAE_' + self.which] = MAE
         self.metrics['RMSEu_' + self.which] = RMSEu
         self.metrics['MAEu_' + self.which] = MAEu
+
+    def ensemble_metrics(self):
+        if '_kendalltau_avg' in self.RS.config:
+            self.metrics['kendalltau'] = np.mean(self.RS.config['_kendalltau_avg'])
+            print('K: ', self.metrics['kendalltau'])
+        if '_stddev_avg' in self.RS.config:
+            self.metrics['stddev'] = np.mean(self.RS.config['_stddev_avg'])
+            print(self.metrics['stddev'])
+
