@@ -30,7 +30,7 @@ def main():
     Parse command line params
     '''
     parser = argparse.ArgumentParser(description='Run recommender training/evaluation')
-    parser.add_argument('action', help='train, test, metrics, plot, clear_db, \
+    parser.add_argument('action', help='train, rec(ommend), metrics, plot, clear_db, \
     clear_exp --id EXP_ID, clear_conf -c CONFIG, show_db')
     parser.add_argument('-c', '--config', action='append',
                         help='Configuration setting for this run \
@@ -249,7 +249,7 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
     if args.ensemble is not None:
         if args.action.find('train') > -1:
             evalu.load_model(RS, FOLD_PATH, split)
-        elif args.action.find('test') > -1 or args.action.find('metrics') > -1:
+        elif args.action.find('rec') > -1 or args.action.find('metrics') > -1:
             RS = evalu.load_recommendations(FOLD_PATH)
         return RS
 
@@ -273,12 +273,12 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
         exp_db.set_fold_arg_val(EXP_ID, fold, 'train_file_prefix', FOLD_PATH)
         exp_db.set_fold_arg_val(EXP_ID, fold, 'train_time', tr_dt)
 
-    if args.action.find('test'):
+    if args.action.find('rec'):
         t0 = time.time()
-        evalu.test_save(RS, FOLD_PATH, split)
+        evalu.rec_save(RS, FOLD_PATH, split)
         tst_dt = time.time() - t0
-        exp_db.set_fold_arg_val(EXP_ID, fold, 'test_file_prefix', FOLD_PATH)
-        exp_db.set_fold_arg_val(EXP_ID, fold, 'test_time', tst_dt)
+        exp_db.set_fold_arg_val(EXP_ID, fold, 'rec_file_prefix', FOLD_PATH)
+        exp_db.set_fold_arg_val(EXP_ID, fold, 'rec_time', tst_dt)
 
     if args.action.find('metrics') > -1:
         metrics = evalu.Metrics(split, filepath=FOLD_PATH)
@@ -305,7 +305,7 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
     '''
     params = conf.as_dict()
     params.update(ensemble_conf.as_dict())
-    params[varpar] = 'varpar'
+    del params[varpar]
     params['varpar'] = varpar
     params['varpar_values'] = str(values)
     EXP_ID = exp_db.get_id_dict(params)
@@ -344,12 +344,12 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
             exp_db.set_fold_arg_val(EXP_ID, fold, 'train_file_prefix', FOLD_PATH)
             exp_db.set_fold_arg_val(EXP_ID, fold, 'train_time', tr_dt)
 
-        if args.action.find('test') > -1:
+        if args.action.find('rec') > -1:
             t0 = time.time()
-            evalu.ensemble_test_save(ens, FOLD_PATH, split)
+            evalu.ensemble_rec_save(ens, FOLD_PATH, split)
             tst_dt = time.time() - t0
-            exp_db.set_fold_arg_val(EXP_ID, fold, 'test_file_prefix', FOLD_PATH)
-            exp_db.set_fold_arg_val(EXP_ID, fold, 'test_time', tst_dt)
+            exp_db.set_fold_arg_val(EXP_ID, fold, 'rec_file_prefix', FOLD_PATH)
+            exp_db.set_fold_arg_val(EXP_ID, fold, 'rec_time', tst_dt)
 
         if args.action.find('metrics') > -1:
             metrics = evalu.Metrics(split, filepath=FOLD_PATH)
@@ -460,6 +460,7 @@ def run_plot(args, exp_db):
                       args.config[0], args.varpar]
 
     plot_name = '-'.join(plot_name)
+    plt.savefig('./results/' + plot_name + '.eps')
     plt.savefig('./results/' + plot_name + '.png')
     plt.show()
 

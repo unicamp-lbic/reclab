@@ -115,7 +115,7 @@ class MixedConfig(Config, EnsembleConfig):
         if conf.is_MF:
             del conf_dict['MF_args']
             del conf_dict['MF_type']
-        conf_dict['RS_args'][varpar] = 'varpar'
+        del conf_dict['RS_args'][varpar]
         Config.__init__(self, **conf_dict)
         EnsembleConfig.__init__(self, **ens_conf.__dict__)
         self.varpar = varpar
@@ -278,22 +278,23 @@ SVD5fold = Config(
 
 WAvg = EnsembleConfig(
     Ens_type=ens.WAvgRatingEnsemble,
-    Ens_args={}
+    Ens_args={'keep': 0.5}
 )
 
 LinReg = EnsembleConfig(
     Ens_type=ens.LinRegRatingEnsemble,
     Ens_args={'regularization': 1.0,
-              'l1_ratio': 0.5  }
+              'l1_ratio': 0.5,
+              'keep': 0.5}
 )
 
 Voting = EnsembleConfig(
     Ens_type=ens.MajorityEnsemble,
-    Ens_args={})
+    Ens_args={'keep': 0.5})
 
 RankSum = EnsembleConfig(
     Ens_type=ens.RankSumEnsemble,
-    Ens_args={})
+    Ens_args={'keep': 0.5})
 
 '''
 Dictionaries of valid configuration settings

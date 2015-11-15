@@ -88,7 +88,7 @@ class DummyRecommender(RatingPredictor):
 
 
     def predict(self, target_user, target_item):
-        return self.user_means[target_user] + self.user_item[target_item]
+        return self.user_means[target_user] + self.item_means[target_item]
 
 
 class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):

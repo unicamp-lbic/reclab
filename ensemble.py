@@ -30,17 +30,26 @@ class BaseEnsemble(BaseRecommender):
         self._RS_list = val
 
     @property
-    def kendalltau_avg(self):
-        return self._kendalltau_avg
+    def keep(self):
+        return self._keep
 
-    @kendalltau_avg.setter
-    def kendalltau_avg(self, val):
-        self._kendalltau_avg = val
+    @keep.setter
+    def keep(self, val):
+        self._keep = val
+
+    @property
+    def diversity_measures(self):
+        return self._diversity_measures
+
+    @diversity_measures.setter
+    def diversity_measures(self, val):
+        self._diversity_measures = val
 
     @abc.abstractmethod
-    def fit(self, split, **varargs):
+    def fit(self, split):
         "learn recommender model (neighborhood, matrix factorization, etc)"
         self.database = split.train
+        filter_RS_list(self.RS_list, split, self.keep)
         return self
 
     def is_ensemble(self):
@@ -50,18 +59,26 @@ class BaseEnsemble(BaseRecommender):
         d = BaseRecommender.config(self)
         d.update(self.__dict__)
         del d['_RS_list']
+        del d['_database']
         return d
+
+
+def filter_RS_list(RS_list, split, keep=0.25):
+        score = []
+        for RS in RS_list:
+            metrics = evalu.Metrics(split, RS=RS)
+            metrics.def_test_set('tuning')
+            metrics.error_metrics()
+            score.append(metrics.metrics['RMSE_tuning'])
+        score = [(s, idx) for idx, s in enumerate(score)]
+        score.sort()
+        keep = [idx for s, idx in score[:int(len(score)*keep)]]
+        RS_list = [RS_list[idx] for idx in keep]
+
 
 class RatingEnsemble(BaseEnsemble, RatingPredictor):
     __metaclass__ = abc.ABCMeta
-
-    @property
-    def stddev_avg(self):
-        return self._stddev_avg
-
-    @stddev_avg.setter
-    def stddev_avg(self, val):
-        self._stddev_avg = val
+    diversity_metric = 'stddev'
 
     @abc.abstractmethod
     def _rating_ensemble_strategy(self, ratings):
@@ -69,12 +86,17 @@ class RatingEnsemble(BaseEnsemble, RatingPredictor):
 
     def predict(self, target_user, target_item):
         ratings = [RS.predict(target_user, target_item) for RS in self.RS_list]
-        self.stddev_avg += [np.std(ratings)]
+        self.diversity_measures += [np.std(ratings)]
         return self._rating_ensemble_strategy(ratings)
 
+    def config(self):
+        d = BaseEnsemble.config(self)
+        d['diversity_metric'] = RatingEnsemble.diversity_metric
+        return d
 
 class ListEnsemble(BaseEnsemble):
     __metaclass__ = abc.ABCMeta
+    diversity_metric = 'kendalltau'
 
     @abc.abstractmethod
     def _list_ensemble_strategy(self, rec_lists):
@@ -88,10 +110,10 @@ class ListEnsemble(BaseEnsemble):
         for RS in self.RS_list:
             rec_list = RS.recommend(target_user, **rec_args)
             recommendations.append(rec_list)
-        recommendations = [l for l in recommendations if l !=[]]
+        recommendations = [l for l in recommendations if l != []]
         if recommendations == []:
             return []
-        self.kendalltau_avg += [self.kendalltau(recommendations)]
+        self.diversity_measures += [self.kendalltau(recommendations)]
         lists = self._list_ensemble_strategy(recommendations)
         how_many = min(how_many, len(lists))
         lists = lists[:how_many]
@@ -117,11 +139,17 @@ class ListEnsemble(BaseEnsemble):
         value /= count
         return value
 
+    def config(self):
+        d = BaseEnsemble.config(self)
+        d['diversity_metric'] = ListEnsemble.diversity_metric
+        return d
+
 
 class MajorityEnsemble(ListEnsemble):
-    def __init__(self, **varargs):
+    def __init__(self, keep=1):
         self.RS_list = []
-        self.kendalltau_avg = []
+        self.diversity_measures = []
+        self.keep = keep
 
     def _list_ensemble_strategy(self, rec_lists):
         item_votes = Counter()
@@ -131,9 +159,10 @@ class MajorityEnsemble(ListEnsemble):
 
 
 class RankSumEnsemble(ListEnsemble):
-    def __init__(self, **varargs):
+    def __init__(self, keep=1):
         self.RS_list = []
-        self.kendalltau_avg = []
+        self.diversity_measures = []
+        self.keep = keep
 
     def _list_ensemble_strategy(self, rec_lists):
         rank_sum = Counter()
@@ -145,45 +174,41 @@ class RankSumEnsemble(ListEnsemble):
 
 
 class AvgRatingEnsemble(RatingEnsemble):
-    def __init__(self, **varargs):
+    def __init__(self, keep=1):
         self.RS_list = []
-        self.kendalltau_avg = []
-        self.stddev_avg = []
-
-        for arg, val in varargs.items():
-            self.__setattr__(arg, val)
+        self.diversity_measures = []
+        self.keep = keep
 
     def _rating_ensemble_strategy(self, ratings):
         return np.mean(ratings)
 
 
 class WAvgRatingEnsemble(RatingEnsemble):
-    def __init__(self, **varargs):
+    def __init__(self, keep=1):
         self.RS_list = []
         self.weights = []
-        self.kendalltau_avg = []
-        self.stddev_avg = []
+        self.diversity_measures = []
+        self.keep = keep
 
     def _rating_ensemble_strategy(self, ratings):
         ratings = np.array(ratings)
         return np.dot(self.weights, ratings)
 
     def fit(self, split):
-        self.database = split.train
+        BaseEnsemble.fit(self, split)
         self.weights = []
         for RS in self.RS_list:
             metrics = evalu.Metrics(split, RS=RS)
-            metrics.def_test_set('valid')
+            metrics.def_test_set('tuning')
             metrics.error_metrics()
-            self.weights.append(1/metrics.metrics['RMSE_valid'])
+            self.weights.append(1/metrics.metrics['RMSE_tuning'])
         self.weights = oneD(normalize(np.array(self.weights), norm='l1'))
 
 
 class LinRegRatingEnsemble(RatingEnsemble):
-    def __init__(self, regularization=1.0, l1_ratio=0.5):
-        self.kendalltau_avg = []
-        self.stddev_avg = []
-
+    def __init__(self, regularization=1.0, l1_ratio=0.5, keep=1):
+        self.diversity_measures = []
+        self.keep = keep
         self.RS_list = []
         self.regularization = regularization
         self.l1_ratio = l1_ratio
@@ -197,11 +222,11 @@ class LinRegRatingEnsemble(RatingEnsemble):
                                 l1_ratio=l1_ratio, positive=True)
 
     def fit(self, split):
-        self.database = split.train
+        BaseEnsemble.fit(self, split)
         X = []
         Y = []
-        for user, u_valid in split.valid.items():
-            for item, rating in u_valid:
+        for user, u in split.tuning.items():
+            for item, rating in u:
                 Y.append(rating)
                 predictions = [RS.predict(user, item) for RS in self.RS_list]
                 X.append(predictions)

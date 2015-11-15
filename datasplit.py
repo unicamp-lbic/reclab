@@ -16,8 +16,9 @@ from utils import to_gzpickle, read_gzpickle
 
 class Split(object):
 
-    def __init__(self, train, valid=None, test=None, config=None):
+    def __init__(self, train, tuning=None, valid=None, test=None, config=None):
         self.train = train
+        self.tuning = tuning
         self.valid = valid
         self.test = test
         self.config = config
@@ -81,6 +82,9 @@ class CVTestRatingSplitter(Splitter):
         self.pct_hidden = pct_hidden
         self.config = {'nfolds': nfolds, 'pct_hidden': pct_hidden,
                        'per_user': per_user, 'threshold': threshold}
+
+        self.ensemble_splitter = HoldoutRatingSplitter(pct_hidden/2, per_user,
+                                                    threshold)
         if nfolds <= 1:
             self.CV_splitter = HoldoutRatingSplitter(pct_hidden, per_user,
                                                     threshold)
@@ -90,6 +94,7 @@ class CVTestRatingSplitter(Splitter):
         self.Test_splitter = HoldoutRatingSplitter(pct_hidden, per_user,
                                                    threshold)
         self.train = None
+        self.tuning = None
         self.test = None
         self.valid = None
         self.suffix = '_CV' + self.CV_splitter.suffix \
@@ -118,6 +123,9 @@ class CVTestRatingSplitter(Splitter):
             for fold in range(self.nfolds):
                 split = self.CV_splitter.hidden_coord[fold]
                 train = HiddenRatingsDatabase(database.get_matrix(sparse=True), split)
+                self.ensemble_splitter.split(train)
+                train = self.ensemble_splitter.train
+                tuning = self.ensemble_splitter.test
                 valid = defaultdict(list)
                 for u, i in split:
                     r = database.get_rating(u, i)
@@ -125,15 +133,19 @@ class CVTestRatingSplitter(Splitter):
 
                 config = self.CV_splitter.config.copy()
                 config['fold'] = fold
-                split = Split(train, valid, self.test, config)
+                split = Split(train, tuning, valid, self.test, config)
                 fname = fname_prefix + '_split_%d.pkl' % fold
                 to_gzpickle(split, fname)
+
 
             return fname_prefix
 
         else:
             self.CV_splitter.split(train_valid)
-            self.train = self.CV_splitter.train
+            for fold in range(self.n_folds):
+                self.ensemble_splitter.split(self.CV_splitter.train[fold])
+                self.train.append(self.ensemble_splitter.train)
+                self.tuning.append(self.ensemble_splitter.test)
             self.valid = self.CV_splitter.test
             return self.save(filepath)
 
@@ -141,7 +153,12 @@ class CVTestRatingSplitter(Splitter):
     def split(self, database):
         self.Test_splitter.split(database)
         self.CV_splitter.split(self.Test_splitter.train)
-        self.train = self.CV_splitter.train
+        self.train = []
+        self.tuning = []
+        for fold in range(self.n_folds):
+            self.ensemble_splitter.split(self.CV_splitter.train[fold])
+            self.train.append(self.ensemble_splitter.train)
+            self.tuning.append(self.ensemble_splitter.test)
         self.valid = self.CV_splitter.test
         self.test = self.Test_splitter.test
 
@@ -149,14 +166,14 @@ class CVTestRatingSplitter(Splitter):
     def save(self, filepath):
         fname_prefix = filepath + self.suffix
         if self.nfolds == 1:
-            split = Split(self.train, self.valid, self.test, self.config)
+            split = Split(self.train, self.tuning[i], self.valid, self.test, self.config)
             with open(fname_prefix + '_split.pkl', 'wb') as f:
                 pkl.dump(split, f)
         else:
             for i in range(self.nfolds):
                 config = self.config.copy()
                 config['fold'] = i
-                split = Split(self.train[i], self.valid[i], self.test, config)
+                split = Split(self.train[i], self.tuning[i], self.valid[i], self.test, config)
                 fname = fname_prefix + '_split_%d.pkl' % i
                 with open(fname, 'wb') as f:
                     pkl.dump(split, f)

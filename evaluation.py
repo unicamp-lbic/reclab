@@ -11,7 +11,7 @@ from utils import to_gzpickle, read_gzpickle
 
 MF_SUFFIX = '_mf.pkl'
 TRAIN_SUFFIX = '_train.pkl'
-TEST_SUFFIX = '_rec.pkl'
+REC_SUFFIX = '_rec.pkl'
 
 
 def load_split(split_fname_prefix, fold=None):
@@ -43,10 +43,10 @@ def train_save(RS, split, out_filepath):
     RS.save(out_filepath+TRAIN_SUFFIX)
 
 
-def test_save(RS, out_filepath, split):
+def rec_save(RS, out_filepath, split):
     RS.load(out_filepath+TRAIN_SUFFIX, split.train)
     rec = SavedRecommendations()
-    rec.save(out_filepath+TEST_SUFFIX, RS)
+    rec.save(out_filepath+REC_SUFFIX, RS)
 
 
 def ensemble_train_save(ens, out_filepath, split):
@@ -54,10 +54,10 @@ def ensemble_train_save(ens, out_filepath, split):
     ens.save(out_filepath+TRAIN_SUFFIX)
 
 
-def ensemble_test_save(ens, out_filepath, split):
+def ensemble_rec_save(ens, out_filepath, split):
     ens.load(out_filepath+TRAIN_SUFFIX, split.train)
     rec = SavedRecommendations()
-    rec.save(out_filepath+TEST_SUFFIX, ens)
+    rec.save(out_filepath+REC_SUFFIX, ens)
 
 
 def load_model(RS, out_filepath, split):
@@ -66,7 +66,7 @@ def load_model(RS, out_filepath, split):
 
 def load_recommendations(filepath):
     rec = SavedRecommendations()
-    rec.load(filepath+TEST_SUFFIX)
+    rec.load(filepath+REC_SUFFIX)
     return rec
 
 
@@ -92,7 +92,7 @@ class Metrics(object):
         if RS is not None:
             self.RS = RS
         elif filepath is not None:
-            self.RS.load(filepath+TEST_SUFFIX)
+            self.RS.load(filepath+REC_SUFFIX)
         else:
             raise ValueError('Must inform either path to recommender\
             or a recommender object')
@@ -126,6 +126,8 @@ class Metrics(object):
             self.test_set = self.split.test
         elif which == 'valid':
             self.test_set = self.split.valid
+        elif which == 'tuning':
+            self.test_set = self.split.tuning
         else:
             raise ValueError("Invalid set name: %s (user 'valid' or 'test')"
                              % which)
@@ -188,10 +190,5 @@ class Metrics(object):
         self.metrics['MAEu_' + self.which] = MAEu
 
     def ensemble_metrics(self):
-        if '_kendalltau_avg' in self.RS.config:
-            self.metrics['kendalltau'] = np.mean(self.RS.config['_kendalltau_avg'])
-            print('K: ', self.metrics['kendalltau'])
-        if '_stddev_avg' in self.RS.config:
-            self.metrics['stddev'] = np.mean(self.RS.config['_stddev_avg'])
-            print(self.metrics['stddev'])
-
+        self.metrics[self.RS.config['diversity_metric']] =\
+            np.mean(self.RS.config['_diversity_measures'])

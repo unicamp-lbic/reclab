@@ -79,6 +79,8 @@ class MatrixDatabase(BaseDatabase):
         self.zero_mean_matrix['useritems'], self.means['useritems'] = \
             _get_zero_mean_matrix(self.zero_mean_matrix['users'].copy(), along='items')
         if sp.issparse(self.matrix):
+            self.zero_mean_matrix_csc = {}
+            self.zero_mean_matrix_dok= {}
             for name in ['users', 'items', 'useritems']:
                 self.zero_mean_matrix_csc[name] = self.zero_mean_matrix[name].tocsc()
                 self.zero_mean_matrix_dok[name] = self.zero_mean_matrix[name].todok()
