@@ -100,8 +100,8 @@ class MatrixDatabase(BaseDatabase):
         if threshold is not None:
             if self.thresholded is None:
                 if sp.issparse(self.matrix):
-                    self.thresholded = self.matrix > threshold
-                    self.thresholded.data = np.array(self.thresholded.data,
+                    self.thresholded = self.matrix.copy()
+                    self.thresholded.data = np.array(self.matrix.data > threshold,
                                                      dtype=np.float)
                     if sparse:
                         return self.thresholded

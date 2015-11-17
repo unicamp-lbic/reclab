@@ -6,6 +6,7 @@ Created on Mon Sep 14 17:58:04 2015
 """
 import numpy as np
 from base import SavedRecommendations
+from collections import defaultdict
 from utils import to_gzpickle, read_gzpickle
 
 
@@ -16,9 +17,9 @@ REC_SUFFIX = '_rec.pkl'
 
 def load_split(split_fname_prefix, fold=None):
     if fold is None:
-        fname =  split_fname_prefix + '_split.pkl'
+        fname = split_fname_prefix + '_split.pkl'
     else:
-        fname =  split_fname_prefix + '_split_%d.pkl' % fold
+        fname = split_fname_prefix + '_split_%d.pkl' % fold
 
     split = read_gzpickle(fname)
 
@@ -71,7 +72,8 @@ def load_recommendations(filepath):
 
 
 class Metrics(object):
-    __atN__ = [1, 5, 10, 15, 20]
+    __atN__ = [1, 5, 10, 15, 20, 30, 50]
+
     def ir_metric_names(which, atNs=None):
         if atNs is None:
             atNs = Metrics.__atN__
@@ -81,8 +83,12 @@ class Metrics(object):
         return metrics
 
     def error_metric_names(which, user=False):
-        return ['RMSE'+('u' if user else '')+ '_' + which,
-                'MAE'+('u' if user else '') + '_' + which]
+        return ['RMSE' + ('u' if user else '') + '_' + which,
+                'MAE' + ('u' if user else '') + '_' + which]
+
+    def coverage_metric_names(which):
+        return ['user_coverage_',
+                'item_coverage_']
 
     def ensemble_metrics_names():
         return ['kendalltau', 'stddev']
@@ -164,6 +170,7 @@ class Metrics(object):
         return absErr
 
     def error_metrics(self):
+        # and coverage too
         if self.test_set is None:
             raise ValueError('def_test_set must be called before metrics \
             computation')
@@ -171,11 +178,13 @@ class Metrics(object):
         MSE = 0
         MAEu = 0
         MSEu = 0
+        MSEr = defaultdict(list)
         nUsers = len(self.test_set)
         nTestRatings = sum([len(r) for r in self.test_set.values()])
         for user, test in self.test_set.items():
             for item, rating in test:
                 absErr = self._absErr_single_rating(user, item, rating)
+                MSEr[rating].append(absErr)
                 MAE += absErr/nTestRatings
                 MSE += absErr**2/nTestRatings
                 MAEu += absErr/len(test)
@@ -184,10 +193,25 @@ class Metrics(object):
         MSEu /= nUsers
         RMSE = np.sqrt(MSE)
         RMSEu = np.sqrt(MSEu)
+        for r in MSEr:
+            self.metrics['RMSEr%d_' % r + self.which] \
+                = np.sqrt(np.mean(MSEr[r]))
+
         self.metrics['RMSE_' + self.which] = RMSE
         self.metrics['MAE_' + self.which] = MAE
         self.metrics['RMSEu_' + self.which] = RMSEu
         self.metrics['MAEu_' + self.which] = MAEu
+
+    def coverage_metrics(self):
+        nUsers = self.RS.config['n_users']
+        nItems = self.RS.config['n_items']
+        covered_items = (self.RS.pred_ratings > 0).any(axis=0).sum()
+        covered_users = (self.RS.pred_ratings > 0).any(axis=1).sum()
+        # User coverage
+        self.metrics['user_coverage'] = covered_users/nUsers
+        # Catalog (item) coverage
+        self.metrics['item_coverage'] = covered_items/nItems
+
 
     def ensemble_metrics(self):
         self.metrics[self.RS.config['diversity_metric']] =\

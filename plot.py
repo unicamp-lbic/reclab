@@ -87,23 +87,43 @@ def metrics(exp_db, conf, sweep, value, args):
         raise ValueError('must inform --set valid|test')
 
     if args.type.find('error') > -1:
-        metric_names =  evalu.Metrics.error_metric_names(args.set)
+        metric_names =  evalu.Metrics.coverage_metric_names(args.set) + \
+            evalu.Metrics.error_metric_names(args.set)
+    elif args.type.find('coverage') > -1:
+        evalu.Metrics.coverage_metric_names(args.set)
+    elif args.type.find('rating') > -1:
+        metric_names = ['RMSEr%d_'%r+args.set for r in range(1,5+1)]
     else:
         metric_names = evalu.Metrics.ir_metric_names(args.set, [int(args.atN)]) + \
             evalu.Metrics.error_metric_names(args.set)
-    select = conf.as_dict()
-    ids = exp_db.get_ids_dict(select)
-    if ids is None:
-        raise RuntimeError('No corresponding metrics available')
-    df = get_xy(ids, exp_db, metric_names)
-    if len(df) is 0:
-        raise RuntimeError('No corresponding metrics available')
-    RS_name = conf.get_name()
-    bar_plot_metrics(df, metric_names,
-                     label=RS_name+' '+sweep.replace('_',' ')+'='+str(value))
 
-    plt.legend(loc='upper left', bbox_to_anchor=(1,1), borderaxespad=2.0,
-               fontsize='x-small', framealpha=0.8)
+    select = conf.as_dict()
+    if args.xaxis is None:
+        ids = exp_db.get_ids_dict(select)
+        if ids is None:
+            raise RuntimeError('No corresponding metrics available')
+        df = get_xy(ids, exp_db, metric_names)
+        metric_names = [name for name in metric_names if name in df.columns]
+        if len(df) is 0:
+            raise RuntimeError('No corresponding metrics available')
+        RS_name = conf.get_name()
+        bar_plot_metrics(df, metric_names,
+                         label=RS_name+' '+sweep.replace('_',' ')+'='+str(value))
+
+        plt.legend(loc='upper left', bbox_to_anchor=(1,1), borderaxespad=2.0,
+                   fontsize='x-small', framealpha=0.8)
+    else:
+        del select[args.xaxis]
+        ids = exp_db.get_ids_dict(select)
+        if ids is None:
+            raise RuntimeError('No corresponding metrics available')
+        df = get_xy(ids, exp_db, metric_names, args.xaxis)
+        if len(df) is 0:
+            raise RuntimeError('No corresponding metrics available')
+        RS_name = conf.get_name()
+        plt.gcf().set_size_inches(8, 4, forward=True)
+        plot_metrics_xaxis(df, args.xaxis , metric_names,
+                     label=RS_name+' '+sweep.replace('_', ' ')+'='+str(value))
 
 # static
 __plot_count = 0
@@ -143,34 +163,6 @@ def single_bar_plot(df, metric, **plotargs):
     plt.grid('on', axis='y', which='both')
 
 
-def metrics_xaxis(exp_db, conf, sweep, value, args):
-    if args.atN is None:
-        raise ValueError('must inform --atN N')
-    if args.set is None:
-        raise ValueError('must inform --set valid|test')
-    if args.xaxis is None:
-        raise ValueError('must inform --xaxis param_name')
-
-    if args.type.find('error') > -1:
-        metric_names =  evalu.Metrics.error_metric_names(args.set)
-    else:
-        metric_names = evalu.Metrics.ir_metric_names(args.set, [int(args.atN)]) + \
-            evalu.Metrics.error_metric_names(args.set)
-
-    select = conf.as_dict()
-    del select[args.xaxis]
-    ids = exp_db.get_ids_dict(select)
-    if ids is None:
-        raise RuntimeError('No corresponding metrics available')
-    df = get_xy(ids, exp_db, metric_names, args.xaxis)
-    if len(df) is 0:
-        raise RuntimeError('No corresponding metrics available')
-    RS_name = conf.get_name()
-    plt.gcf().set_size_inches(8, 4, forward=True)
-    plot_metrics_xaxis(df, args.xaxis , metric_names,
-                 label=RS_name+' '+sweep.replace('_', ' ')+'='+str(value))
-
-
 def get_xy(ids, exp_db, metric_names, x_axis=None):
     metric_values = defaultdict(list)
     x_values = []
@@ -184,8 +176,11 @@ def get_xy(ids, exp_db, metric_names, x_axis=None):
                 metric_values[metric].append(
                     (total_time.mean(), total_time.std()))
             else:
-                metric_values[metric].append(
-                    (df[metric].values.mean(), df[metric].values.std()))
+                try:
+                    metric_values[metric].append(
+                        (df[metric].values.mean(), df[metric].values.std()))
+                except KeyError:
+                    pass
     # at this point there is a list of points for every metric
     # and a list of x_values
     if x_axis is not None:

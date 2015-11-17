@@ -156,6 +156,16 @@ dummy5fold = Config(
     pct_hidden=0.2
 )
 
+dummydelicious = Config(
+    database='delicious',
+    RS_type=rec.DummyRecommender,
+    RS_args={},
+    is_MF=False,
+    nfolds=1,
+    threshold=0,
+    pct_hidden=0.2
+)
+
 IB5fold = Config(
     database='ml100k',
     RS_type=rec.ItemBased,
@@ -171,6 +181,22 @@ IB5fold = Config(
     pct_hidden=0.2
 )
 
+IBdelicious = Config(
+    database='delicious',
+    RS_type=rec.ItemBased,
+    RS_args={'n_neighbors': 20,
+             'model_size': 1.0,
+             'algorithm': 'brute',
+             'metric': 'cosine',
+             'offline_kNN': True,
+             'weighting': 'none'},
+    nfolds=1,
+    is_MF=False,
+    threshold=0,
+    pct_hidden=0.2
+)
+
+
 UB5fold = Config(
     database='ml100k',
     RS_type=rec.UserBased,
@@ -182,6 +208,20 @@ UB5fold = Config(
     nfolds=5,
     is_MF=False,
     threshold=3,
+    pct_hidden=0.2
+)
+
+UBdelicious = Config(
+    database='delicious',
+    RS_type=rec.UserBased,
+    RS_args={'n_neighbors': 20,
+             'algorithm': 'brute',
+             'metric': 'correlation',
+             'offline_kNN': True,
+             'weighting': 'none'},
+    nfolds=1,
+    is_MF=False,
+    threshold=0,
     pct_hidden=0.2
 )
 
@@ -200,6 +240,24 @@ BMF5fold = Config(
     nfolds=5,
     is_MF=True,
     threshold=3,
+    pct_hidden=0.2
+)
+
+BMFdelicious = Config(
+    database='delicious',
+    RS_type=rec.BMFrecommender,
+    RS_args={'n_neighbors': 20,
+             'model_size': 1.0,
+             'neighbor_type': 'user',
+             'algorithm': 'brute',
+             'metric': 'cosine',
+             'min_coverage': 1.0,
+             'bin_threshold': 0,
+             'offline_kNN': True,
+             'weighting': 'none'},
+    nfolds=1,
+    is_MF=True,
+    threshold=0,
     pct_hidden=0.2
 )
 
@@ -223,6 +281,26 @@ BMFLSH5fold = Config(
     pct_hidden=0.2
 )
 
+BMFLSHdelicious = Config(
+    database='delicious',
+    RS_type=rec.BMFrecommender,
+    RS_args={'n_neighbors': 20,
+             'model_size': 1.0,
+             'neighbor_type': 'user',
+             'offline_kNN': True,
+             'algorithm': 'LSH',
+             'metric': 'cosine',
+             'min_coverage': 1.0,
+             'bin_threshold': 0,
+             'weighting': 'none',
+             'n_estimators': 10,
+             'n_candidates': 2},
+    nfolds=1,
+    is_MF=True,
+    threshold=0,
+    pct_hidden=0.2
+)
+
 BMFRP5fold = Config(
     database='ml100k',
     RS_type=rec.BMFRPrecommender,
@@ -240,6 +318,26 @@ BMFRP5fold = Config(
     nfolds=5,
     is_MF=True,
     threshold=3,
+    pct_hidden=0.2
+)
+
+BMFRPdelicious = Config(
+    database='delicious',
+    RS_type=rec.BMFRPrecommender,
+    RS_args={'RP_type': 'sparse',
+             'dim_red': 0.5,
+             'n_neighbors': 20,
+             'model_size': 1.0,
+             'neighbor_type': 'user',
+             'algorithm': 'brute',
+             'metric': 'cosine',
+             'min_coverage': 1.0,
+             'bin_threshold': 0,
+             'offline_kNN': True,
+             'weighting': 'none'},
+    nfolds=1,
+    is_MF=True,
+    threshold=0,
     pct_hidden=0.2
 )
 
@@ -265,6 +363,29 @@ BMFRPLSH5fold = Config(
     pct_hidden=0.2
 )
 
+BMFRPLSHdelicious = Config(
+    database='delicious',
+    RS_type=rec.BMFRPrecommender,
+    RS_args={'RP_type': 'sparse',
+             'dim_red': 0.5,
+             'n_neighbors': 20,
+             'model_size': 1.0,
+             'neighbor_type': 'user',
+             'algorithm': 'LSH',
+             'metric': 'cosine',
+             'min_coverage': 1.0,
+             'bin_threshold': 0,
+             'offline_kNN': True,
+             'weighting': 'none',
+             'n_estimators': 10,
+             'n_candidates': 2},
+    nfolds=1,
+    is_MF=True,
+    threshold=0,
+    pct_hidden=0.2
+)
+
+
 SVD5fold = Config(
     database='ml100k',
     RS_type=rec.SVDrecommender,
@@ -276,6 +397,16 @@ SVD5fold = Config(
     pct_hidden=0.2
 )
 
+SVDdelicious = Config(
+    database='delicious',
+    RS_type=rec.SVDrecommender,
+    RS_args={'dim': 50,
+             'regularization': 0.1},
+    nfolds=5,
+    is_MF=True,
+    threshold=0,
+    pct_hidden=0.2
+)
 WAvg = EnsembleConfig(
     Ens_type=ens.WAvgRatingEnsemble,
     Ens_args={'keep': 0.5}
@@ -307,7 +438,15 @@ valid_configs = {
     'IB5fold': IB5fold,
     'dummy5fold': dummy5fold,
     'UB5fold': UB5fold,
-    'SVD5fold': SVD5fold
+    'SVD5fold': SVD5fold,
+    'BMFdelicious': BMFdelicious,
+    'BMFLSHdelicious': BMFLSHdelicious,
+    'BMFRPLSHdelicious': BMFRPLSHdelicious,
+    'BMFRPdelicious': BMFRPdelicious,
+    'IBdelicious': IBdelicious,
+    'dummydelicious': dummydelicious,
+    'UBdelicious': UBdelicious,
+    'SVDdelicious': SVDdelicious
 }
 
 valid_ensemble_configs = {

@@ -283,8 +283,15 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
     if args.action.find('metrics') > -1:
         metrics = evalu.Metrics(split, filepath=FOLD_PATH)
         metrics.def_test_set(args.set)
-        metrics.error_metrics()
-        metrics.list_metrics(conf.threshold)
+        if args.action.replace('train','').replace('rec','') == 'metrics':
+            metrics.error_metrics()
+            metrics.list_metrics(conf.threshold)
+        else:
+            if args.action.find('error') > -1 :
+                metrics.error_metrics()
+            if args.action.find('list') > -1:
+                metrics.list_metrics(conf.threshold)
+            metrics.coverage_metrics()
         for arg, val in metrics.metrics.items():
             exp_db.set_fold_arg_val(EXP_ID, fold, arg, val)
 
@@ -354,9 +361,16 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
         if args.action.find('metrics') > -1:
             metrics = evalu.Metrics(split, filepath=FOLD_PATH)
             metrics.def_test_set(args.set)
-            metrics.error_metrics()
-            metrics.list_metrics(conf.threshold)
+            if args.action.replace('train','').replace('rec','') == 'metrics':
+                metrics.error_metrics()
+                metrics.list_metrics(conf.threshold)
+            else:
+                if args.action.find('error') > -1 :
+                    metrics.error_metrics()
+                if args.action.find('list') > -1:
+                    metrics.list_metrics(conf.threshold)
             metrics.ensemble_metrics()
+            metrics.coverage_metrics()
             for arg, val in metrics.metrics.items():
                 exp_db.set_fold_arg_val(EXP_ID, fold, arg, val)
 
@@ -473,10 +487,7 @@ def sweep_plot(sweep_args, conf, exp_db, args):
     for v in values:
         set_par(sweep, v, conf)
         if args.type.find('metrics') > -1:
-            if args.xaxis is not None:
-                plot.metrics_xaxis(exp_db, conf, sweep, v, args)
-            else:
-                plot.metrics(exp_db, conf, sweep, v, args)
+            plot.metrics(exp_db, conf, sweep, v, args)
 
         elif args.type == 'PR':
             plot.PR_curve(exp_db, conf, sweep, v, args)

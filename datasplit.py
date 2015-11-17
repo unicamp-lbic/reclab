@@ -142,10 +142,9 @@ class CVTestRatingSplitter(Splitter):
 
         else:
             self.CV_splitter.split(train_valid)
-            for fold in range(self.n_folds):
-                self.ensemble_splitter.split(self.CV_splitter.train[fold])
-                self.train.append(self.ensemble_splitter.train)
-                self.tuning.append(self.ensemble_splitter.test)
+            self.ensemble_splitter.split(self.CV_splitter.train)
+            self.train = self.ensemble_splitter.train
+            self.tuning = self.ensemble_splitter.test
             self.valid = self.CV_splitter.test
             return self.save(filepath)
 
@@ -155,10 +154,15 @@ class CVTestRatingSplitter(Splitter):
         self.CV_splitter.split(self.Test_splitter.train)
         self.train = []
         self.tuning = []
-        for fold in range(self.n_folds):
-            self.ensemble_splitter.split(self.CV_splitter.train[fold])
-            self.train.append(self.ensemble_splitter.train)
-            self.tuning.append(self.ensemble_splitter.test)
+        if self.nfolds > 1:
+            for fold in range(self.nfolds):
+                self.ensemble_splitter.split(self.CV_splitter.train[fold])
+                self.train.append(self.ensemble_splitter.train)
+                self.tuning.append(self.ensemble_splitter.test)
+        else:
+            self.ensemble_splitter.split(self.CV_splitter.train)
+            self.train = self.ensemble_splitter.train
+            self.tuning = self.ensemble_splitter.test
         self.valid = self.CV_splitter.test
         self.test = self.Test_splitter.test
 
@@ -166,17 +170,15 @@ class CVTestRatingSplitter(Splitter):
     def save(self, filepath):
         fname_prefix = filepath + self.suffix
         if self.nfolds == 1:
-            split = Split(self.train, self.tuning[i], self.valid, self.test, self.config)
-            with open(fname_prefix + '_split.pkl', 'wb') as f:
-                pkl.dump(split, f)
+            split = Split(self.train, self.tuning, self.valid, self.test, self.config)
+            to_gzpickle(split, fname_prefix + '_split.pkl')
         else:
             for i in range(self.nfolds):
                 config = self.config.copy()
                 config['fold'] = i
                 split = Split(self.train[i], self.tuning[i], self.valid[i], self.test, config)
                 fname = fname_prefix + '_split_%d.pkl' % i
-                with open(fname, 'wb') as f:
-                    pkl.dump(split, f)
+                to_gzpickle(split, fname)
         return fname_prefix
 
 class kFoldRatingSplitter(Splitter):

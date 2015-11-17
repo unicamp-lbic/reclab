@@ -269,7 +269,7 @@ class BMFrecommender(MFrecommender, NeighborStrategy, PredictionStrategy):
         self.database = database
         mf = BMF(self.min_coverage)
         self.P, self.Q = \
-                mf.fit(self.database.get_matrix(threshold=self.bin_threshold))
+                mf.fit(self.database.get_matrix(threshold=self.bin_threshold, sparse=True))
         return self.P, self.Q
 
     def fit(self, database):
