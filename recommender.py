@@ -158,7 +158,7 @@ class UserBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
         self.database = database
         if self.offline_kNN:
             if self.metric == 'correlation':
-                sparse = False:
+                sparse = False
             else:
                 sparse = True
             matrix, means = database.get_matrix(zero_mean='users',
