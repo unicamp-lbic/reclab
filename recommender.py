@@ -157,8 +157,12 @@ class UserBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
     def fit(self, database):
         self.database = database
         if self.offline_kNN:
+            if self.metric == 'correlation':
+                sparse = False:
+            else:
+                sparse = True
             matrix, means = database.get_matrix(zero_mean='users',
-                                                     sparse=True)
+                                                     sparse=sparse)
             self.kNN.estimator.n_neighbors = matrix.shape[1]
             self.kNN.fit(matrix, keepgraph=True)
         return self
