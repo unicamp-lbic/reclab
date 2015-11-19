@@ -180,7 +180,10 @@ def run_sweep(args, conf, exp_db, ensemble_conf=None):
         elif ensemble_conf is not None:
             run_ensemble(args, conf, ensemble_conf, exp_db)
         else:
-            run_exp(args, conf, exp_db)
+            try:
+                run_exp(args, conf, exp_db)
+            except:
+                pass
 
 
 def run_exp(args, conf, exp_db):
@@ -273,7 +276,7 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
         exp_db.set_fold_arg_val(EXP_ID, fold, 'train_file_prefix', FOLD_PATH)
         exp_db.set_fold_arg_val(EXP_ID, fold, 'train_time', tr_dt)
 
-    if args.action.find('rec'):
+    if args.action.find('rec') > -1:
         t0 = time.time()
         evalu.rec_save(RS, FOLD_PATH, split)
         tst_dt = time.time() - t0
@@ -291,7 +294,7 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
                 metrics.error_metrics()
             if args.action.find('list') > -1:
                 metrics.list_metrics(conf.threshold)
-            metrics.coverage_metrics()
+        metrics.coverage_metrics()
         for arg, val in metrics.metrics.items():
             exp_db.set_fold_arg_val(EXP_ID, fold, arg, val)
 
