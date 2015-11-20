@@ -390,6 +390,8 @@ class BMFRPrecommender(BMFrecommender):
             self.RP = GaussianRandomProjection(n_components=n_components)
         elif self.RP == 'sparse':
             self.RP = SparseRandomProjection(n_components=n_components)
+        else:
+            raise ValueError('Unrecognized RP type')
 
         np.random.RandomState(self.seed)
         if self.neighbor_type == 'user':
