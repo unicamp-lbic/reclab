@@ -55,6 +55,16 @@ class BaseEnsemble(BaseRecommender):
     def is_ensemble(self):
         return True
 
+    def save(self, filepath):
+        for i, RS in enumerate(self.RS_list):
+            self.RS_list[i].database = None
+        BaseRecommender.save(self, filepath)
+
+    def load(self, filepath, database):
+        BaseRecommender.load(self, filepath, database)
+        for i, RS in enumerate(self.RS_list):
+            self.RS_list[i].database = database
+
     def config(self):
         d = BaseRecommender.config(self)
         d.update(self.__dict__)
