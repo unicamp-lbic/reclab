@@ -180,10 +180,8 @@ def run_sweep(args, conf, exp_db, ensemble_conf=None):
         elif ensemble_conf is not None:
             run_ensemble(args, conf, ensemble_conf, exp_db)
         else:
-            try:
-                run_exp(args, conf, exp_db)
-            except:
-                pass
+            run_exp(args, conf, exp_db)
+
 
 
 def run_exp(args, conf, exp_db):
