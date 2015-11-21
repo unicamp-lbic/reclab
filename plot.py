@@ -98,6 +98,9 @@ def metrics(exp_db, conf, sweep, value, args):
             evalu.Metrics.error_metric_names(args.set)
 
     select = conf.as_dict()
+    if conf.is_MF:
+        del select['MF_args']
+
     if args.xaxis is None:
         ids = exp_db.get_ids_dict(select)
         if ids is None:
@@ -211,6 +214,10 @@ def plot_single_metric_xaxis(df, x_axis, metric, **plotargs):
     y = [mean for mean, std in df[metric]]
     yerr = [std for mean, std in df[metric]]
     plt.errorbar(x, y, yerr, marker='o', **plotargs)
+    if max(y)/min(y) > 1e2:
+        plt.yscale('log')
+    if max(x)/min(x) > 1e2:
+        plt.xscale('log')
     plt.title(metric.replace('_', ' '), fontsize='small')
     plt.yticks(fontsize='small')
     plt.xticks(fontsize='small')
