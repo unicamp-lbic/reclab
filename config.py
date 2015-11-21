@@ -389,8 +389,8 @@ BMFRPLSHdelicious = Config(
 SVD5fold = Config(
     database='ml100k',
     RS_type=rec.SVDrecommender,
-    RS_args={'dim': 50,
-             'regularization': 0.1},
+    RS_args={'dim': 10,
+             'regularization': 0.01},
     nfolds=5,
     is_MF=True,
     threshold=3,
@@ -401,12 +401,49 @@ SVDdelicious = Config(
     database='delicious',
     RS_type=rec.SVDrecommender,
     RS_args={'dim': 50,
-             'regularization': 0.1},
-    nfolds=5,
+             'regularization': 0.01},
+    nfolds=1,
     is_MF=True,
     threshold=0,
     pct_hidden=0.2
 )
+
+SVDNN5fold = Config(
+    database='ml100k',
+    RS_type=rec.SVDrecommender,
+    RS_args={'dim': 10,
+             'regularization': 0.01,
+             'n_neighbors': 30,
+             'model_size': 1.0,
+             'neighbor_type': 'user',
+             'algorithm': 'brute',
+             'metric': 'cosine',
+             'offline_kNN': True,
+             'weighting': 'none'},
+    nfolds=5,
+    is_MF=True,
+    threshold=3,
+    pct_hidden=0.2
+)
+
+SVDNNdelicious = Config(
+    database='delicious',
+    RS_type=rec.SVDrecommender,
+    RS_args={'dim': 50,
+             'regularization': 0.01,
+             'n_neighbors': 30,
+             'model_size': 1.0,
+             'neighbor_type': 'user',
+             'algorithm': 'brute',
+             'metric': 'cosine',
+             'offline_kNN': True,
+             'weighting': 'none'},
+    nfolds=1,
+    is_MF=True,
+    threshold=0,
+    pct_hidden=0.2
+)
+
 WAvg = EnsembleConfig(
     Ens_type=ens.WAvgRatingEnsemble,
     Ens_args={'keep': 0.5}

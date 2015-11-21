@@ -210,7 +210,63 @@ class MFrecommender(RatingPredictor):
         pass
 
 
-class BMFrecommender(MFrecommender, NeighborStrategy, PredictionStrategy):
+class MFNNrecommender(MFrecommender):
+    def predict(self, target_user, target_item):
+        if self.neighbor_type == 'user':
+            if np.isscalar(target_user):
+                user_vector = self.P[target_user, :]
+            else:
+                user_vector = self.transform(target_user)
+
+            user_ids = self.database.get_rated_users(target_item)
+            if len(user_ids) == 0:
+                #print('No co-rating neighbor for user %d, item %d' %
+                #      (target_user, target_item))
+                return 0
+
+            if self.offline_kNN:
+                n_neighbors = min(self.n_neighbors, self.database.n_users())
+                distances, indices = \
+                    self.kNN.kneighbors(target_user, n_neighbors,
+                                        filter=user_ids)
+            else:
+                self.kNN.fit(self.P[user_ids, :])
+                n_neighbors = min(self.n_neighbors, len(user_ids))
+                distances, indices = \
+                    self.kNN.kneighbors(user_vector, n_neighbors)
+                indices = np.array([user_ids[i] for i in oneD(indices)])
+
+            ratings, similarities = \
+                self._user_strategy(target_item, distances, indices,
+                                    zero_mean=False)
+
+        elif self.neighbor_type == 'item':
+            item_vector = self.Q[target_item, :]
+            item_ids = self.database.get_rated_items(target_user)
+            if len(item_ids) == 0:
+                #print('No co-rating neighbor for user %d, item %d' %
+                #      (target_user, target_item))
+                return 0
+
+            if self.offline_kNN:
+                n_neighbors = min(self.n_neighbors, self.database.n_items())
+                distances, indices = \
+                    self.kNN.kneighbors(item_vector, n_neighbors,
+                                        filter=item_ids)
+            else:
+                self.kNN.fit(self.Q[item_ids, :])
+                n_neighbors = min(self.n_neighbors, len(item_ids))
+                distances, indices = \
+                    self.kNN.kneighbors(item_vector, n_neighbors)
+                indices = np.array([item_ids[i] for i in oneD(indices)])
+
+            ratings, similarities = \
+                self._item_strategy(target_user,
+                                    distances, indices, zero_mean=False)
+
+        return self._predict(ratings, similarities)
+
+class BMFrecommender(MFNNrecommender, NeighborStrategy, PredictionStrategy):
     __MF_type__ = BMF
 
     def __MF_args__(RS_args):
@@ -286,6 +342,13 @@ class BMFrecommender(MFrecommender, NeighborStrategy, PredictionStrategy):
                                      smooth_idf=True, sublinear_tf=False)
             self.P = tfidf.fit_transform(self.P)
             self.Q = tfidf.fit_transform(self.Q)
+        elif self.weighting == 'factors':
+            if self.neighbor_type == 'user':
+                self.P = np.dot(self.P, self.Q.T) \
+                    /np.tile(self.Q.sum(axis=0), (self.P.shape[0], 1))
+            elif self.neighbor_type == 'item':
+                self.Q = np.dot(self.Q, self.P.T) \
+                    /np.tile(self.P.sum(axis=0), (self.Q.shape[0], 1))
 
         if self.offline_kNN:
             if self.neighbor_type == 'user':
@@ -301,60 +364,6 @@ class BMFrecommender(MFrecommender, NeighborStrategy, PredictionStrategy):
                                  to constructor' % self.neighbor_type)
         return self
 
-    def predict(self, target_user, target_item):
-        if self.neighbor_type == 'user':
-            if np.isscalar(target_user):
-                user_vector = self.P[target_user, :]
-            else:
-                user_vector = self.transform(target_user)
-
-            user_ids = self.database.get_rated_users(target_item)
-            if len(user_ids) == 0:
-                #print('No co-rating neighbor for user %d, item %d' %
-                #      (target_user, target_item))
-                return 0
-
-            if self.offline_kNN:
-                n_neighbors = min(self.n_neighbors, self.database.n_users())
-                distances, indices = \
-                    self.kNN.kneighbors(target_user, n_neighbors,
-                                        filter=user_ids)
-            else:
-                self.kNN.fit(self.P[user_ids, :])
-                n_neighbors = min(self.n_neighbors, len(user_ids))
-                distances, indices = \
-                    self.kNN.kneighbors(user_vector, n_neighbors)
-                indices = np.array([user_ids[i] for i in oneD(indices)])
-
-            ratings, similarities = \
-                self._user_strategy(target_item, distances, indices,
-                                    zero_mean=False)
-
-        elif self.neighbor_type == 'item':
-            item_vector = self.Q[target_item, :]
-            item_ids = self.database.get_rated_items(target_user)
-            if len(item_ids) == 0:
-                #print('No co-rating neighbor for user %d, item %d' %
-                #      (target_user, target_item))
-                return 0
-
-            if self.offline_kNN:
-                n_neighbors = min(self.n_neighbors, self.database.n_items())
-                distances, indices = \
-                    self.kNN.kneighbors(item_vector, n_neighbors,
-                                        filter=item_ids)
-            else:
-                self.kNN.fit(self.Q[item_ids, :])
-                n_neighbors = min(self.n_neighbors, len(item_ids))
-                distances, indices = \
-                    self.kNN.kneighbors(item_vector, n_neighbors)
-                indices = np.array([item_ids[i] for i in oneD(indices)])
-
-            ratings, similarities = \
-                self._item_strategy(target_user,
-                                    distances, indices, zero_mean=False)
-
-        return self._predict(ratings, similarities)
 
 
 class BMFRPrecommender(BMFrecommender):
@@ -379,6 +388,14 @@ class BMFRPrecommender(BMFrecommender):
                                      smooth_idf=True, sublinear_tf=False)
             self.P = tfidf.fit_transform(self.P)
             self.Q = tfidf.fit_transform(self.Q)
+
+        elif self.weighting == 'factors':
+            if self.neighbor_type == 'user':
+                self.P = np.dot(self.P, self.Q.T) \
+                    /np.tile(self.Q.sum(axis=0), (self.P.shape[0], 1))
+            elif self.neighbor_type == 'item':
+                self.Q = np.dot(self.Q, self.P.T) \
+                    /np.tile(self.P.sum(axis=0), (self.Q.shape[0], 1))
 
         if self.dim_red != 'auto':
             n_components = int(np.ceil(self.dim_red*self.P.shape[1]))
@@ -441,3 +458,29 @@ class SVDrecommender(MFrecommender):
 
     def predict(self, target_user, target_item):
         return np.dot(self.P[target_user, :], self.Q[target_item, :])
+
+
+class SVDNNrecommender(SVDrecommender, MFNNrecommender):
+    def __init__(self, n_neighbors=20, model_size=1, offline_kNN=True,
+                 dim=10, regularization=0.1):
+        SVDrecommender.__init__(self, dim, regularization)
+        self.n_neighbors = n_neighbors
+        self.model_size = model_size
+        self.kNN = None
+        self.offline_kNN = self.offline_kNN
+
+    def fit(self, database):
+        SVDrecommender.fit(self, database)
+        if self.offline_kNN:
+            if self.neighbor_type == 'user':
+                self.model_size = int(np.ceil(self.model_size * database.n_users()))
+                self.kNN.estimator.n_neighbors = self.model_size
+                self.kNN.fit(self.P, keepgraph=True)
+            elif self.neighbor_type == 'item':
+                self.model_size = int(np.ceil(self.model_size * database.n_items()))
+                self.kNN.estimator.n_neighbors = self.model_size
+                self.kNN.fit(self.Q, keepgraph=True)
+            else:
+                raise ValueError('Invalid neighbor_type "%s" parameter passed \
+                                 to constructor' % self.neighbor_type)
+        return self
