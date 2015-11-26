@@ -63,7 +63,7 @@ class Config(BaseConfig):
         self.threshold = threshold
         self.is_MF = is_MF
         if is_MF:
-            self.MF_type = RS_type.__MF_type__
+            self.MF_type = RS_type.__MF_type__.__name__
             self.MF_args = RS_type.__MF_args__(RS_args)
 
     def get_name(self):
@@ -80,7 +80,7 @@ class Config(BaseConfig):
         if par in self.RS_args:
             self.RS_args[par] = value
             if self.is_MF:
-                self.MF_type = self.RS_type.__MF_type__
+                self.MF_type = self.RS_type.__MF_type__.__name__
                 self.MF_args = self.RS_type.__MF_args__(self.RS_args)
         else:
             raise AttributeError('Invalid config param')
@@ -452,8 +452,8 @@ WAvg = EnsembleConfig(
 LinReg = EnsembleConfig(
     Ens_type=ens.LinRegRatingEnsemble,
     Ens_args={'regularization': 1.0,
-              'l1_ratio': 0.5,
-              'keep': 0.5}
+              'l1_ratio': 0.1,
+              'keep': 0.25}
 )
 
 Voting = EnsembleConfig(
