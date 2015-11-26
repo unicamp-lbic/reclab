@@ -183,7 +183,8 @@ def get_xy(ids, exp_db, metric_names, x_axis=None):
                     metric_values[metric].append(
                         (df[metric].values.mean(), df[metric].values.std()))
                 except KeyError:
-                    pass
+                    print('Metric %s not available' % metric)
+
     # at this point there is a list of points for every metric
     # and a list of x_values
     if x_axis is not None:
