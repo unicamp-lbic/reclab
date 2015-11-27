@@ -170,7 +170,7 @@ class ExperimentDB(object):
     def clear_experiment(self, exp_id):
         self._load_db()
         call(["trash", './results/'+ exp_id + '/'])
-        self.db.drop(exp_id, inplace=True)
+        self.db.drop(exp_id, inplace=True, level=0)
         print('cleared experiment', exp_id)
         self._save_db()
 
