@@ -16,7 +16,7 @@ import evaluation as evalu
 
 matplotlib.rcParams['ps.useafm'] = True
 matplotlib.rcParams['pdf.use14corefonts'] = True
-colors = 'bgrcmyk'
+colors = ['royalblue', 'forestgreen', 'firebrick', 'darkorange', 'navy', 'hotpink', 'darkturquoise', 'darkviolet', 'gray', 'gold', 'yellowgreen']
 
 
 
@@ -90,7 +90,7 @@ def metrics(exp_db, conf, sweep, value, args):
         metric_names =  evalu.Metrics.coverage_metric_names(args.set) + \
             evalu.Metrics.error_metric_names(args.set)
     elif args.type.find('coverage') > -1:
-        evalu.Metrics.coverage_metric_names(args.set)
+        metric_names = evalu.Metrics.coverage_metric_names(args.set)
     elif args.type.find('rating') > -1:
         metric_names = ['RMSEr%d_'%r+args.set for r in range(1,5+1)]
     else:
