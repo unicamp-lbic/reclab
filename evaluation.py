@@ -87,8 +87,8 @@ class Metrics(object):
                 'MAE' + ('u' if user else '') + '_' + which]
 
     def coverage_metric_names(which):
-        return ['user_coverage_',
-                'item_coverage_']
+        return ['user_coverage',
+                'item_coverage']
 
     def ensemble_metrics_names():
         return ['kendalltau', 'stddev']
