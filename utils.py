@@ -6,7 +6,6 @@ Created on Mon Apr 27 12:07:20 2015
 """
 import os
 import numpy as np
-import matplotlib.pyplot as plt
 from time import time
 import gzip
 import pickle as pkl
