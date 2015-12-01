@@ -63,7 +63,7 @@ def plot_PR(df, metric_names,**plot_args):
 def time_plot(exp_db, conf, sweep, value, args):
     if args.set is None:
         raise ValueError('must inform --set valid|test')
-    metric_names = ['train_time','test_time']
+    metric_names = ['train_time','rec_time']
     select = conf.as_dict()
     ids = exp_db.get_ids_dict(select)
     if ids is None:
