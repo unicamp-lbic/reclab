@@ -9,15 +9,16 @@ import numpy as np
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
+from cycler import cycler
 from collections import defaultdict
 import evaluation as evalu
-
-
 
 matplotlib.rcParams['ps.useafm'] = True
 matplotlib.rcParams['pdf.use14corefonts'] = True
 colors = ['royalblue', 'forestgreen', 'firebrick', 'darkorange', 'navy', 'hotpink', 'darkturquoise', 'darkviolet', 'gray', 'gold', 'yellowgreen']
-
+markers = ['o', '^', 's', '>', 'D', '<', '*','v','p','+','x']
+plt.rc('axes', prop_cycle=(cycler('color', colors) +
+                           cycler('marker', markers)))
 
 
 def PR_curve(exp_db, conf, sweep, value, args):
@@ -53,7 +54,7 @@ def plot_PR(df, metric_names,**plot_args):
         xerr.append(values[atN]['R'][0][1])
 
 
-    plt.errorbar(x, y, yerr, xerr,**plot_args)
+    plt.errorbar(x, y, yerr, xerr, **plot_args)
     plt.grid('on', which='both')
     plt.ylabel('Precision')
     plt.xlabel('Recall')
