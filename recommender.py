@@ -343,11 +343,12 @@ class BMFrecommender(MFNNrecommender, NeighborStrategy, PredictionStrategy):
             self.P = tfidf.fit_transform(self.P)
             self.Q = tfidf.fit_transform(self.Q)
         elif self.weighting == 'factors':
+            I = self.database.get_matrix(threshold=self.bin_threshold, sparse=True)
             if self.neighbor_type == 'user':
-                self.P = np.dot(self.P, self.Q.T) \
+                self.P = np.dot(I, self.Q) \
                     /np.tile(self.Q.sum(axis=0), (self.P.shape[0], 1))
             elif self.neighbor_type == 'item':
-                self.Q = np.dot(self.Q, self.P.T) \
+                self.Q = np.dot(I.T, self.P) \
                     /np.tile(self.P.sum(axis=0), (self.Q.shape[0], 1))
 
         if self.offline_kNN:
@@ -436,21 +437,27 @@ class SVDrecommender(MFrecommender):
         self.database = None
         self.P = None
         self.Q = None
+        self.model = None
         self.dim = dim
         self.regularization = regularization
 
-    def gen_mf(self, database):
+    def load_mf(self, P, Q, model):
+        MFrecommender.load_mf(self, P, Q)
+        self.model = model
+
+    def gen_mf(self, database, **MF_args):
         ratings = []
         n_users = database.n_users()
         n_items = database.n_items()
         for user in range(n_users):
             ratings += [(user, i, r) for i, r in
                         database.get_rating_list(user, zero_mean=False)]
-        model = SVD(ratings, n_users, n_items, self.dim, self.regularization)
-        model.optimize()
-        self.P = model.users
-        self.Q = model.items
-        return self.P, self.Q
+        self.model = SVD(ratings, n_users, n_items,
+                         self.dim, self.regularization, **MF_args)
+        self.model.optimize()
+        self.P = self.model.users
+        self.Q = self.model.items
+        return self.P, self.Q, self.model
 
     def fit(self, database):
         if self.P is None or self.Q is None:

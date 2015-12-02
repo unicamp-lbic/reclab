@@ -26,8 +26,8 @@ def load_split(split_fname_prefix, fold=None):
     return split
 
 
-def gen_mf(split, filepath, RS):
-    matrices = RS.gen_mf(split.train)
+def gen_mf(split, filepath, RS, **MF_args):
+    matrices = RS.gen_mf(split.train, **MF_args)
     fname = filepath + MF_SUFFIX
     to_gzpickle(matrices, fname)
 
