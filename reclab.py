@@ -25,7 +25,7 @@ import plot
 from utils import Notifier
 
 
-def main():
+def arg_parsing(args=None):
     '''
     Parse command line params
     '''
@@ -55,7 +55,14 @@ def main():
     parser.add_argument('--notify', action='store_true')
 
 
-    args = parser.parse_args()
+    args = parser.parse_args(args)
+    return args
+
+def main(args=None):
+    '''
+    Parse command line params
+    '''
+    args = arg_parsing(args)
 
     '''
     Process clear_db command
