@@ -252,13 +252,12 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
         split = evalu.load_split(split_fname_prefix)
     else:
         split = evalu.load_split(split_fname_prefix, fold)
-
+    '''
+    if ensemble, get base RSs
+    '''
     RS = conf.RS_type(**conf.RS_args)
     if args.ensemble is not None:
-        if args.action.find('train') > -1:
-            evalu.load_model(RS, FOLD_PATH, split)
-        elif args.action.find('rec') > -1 or args.action.find('metrics') > -1:
-            RS = evalu.load_recommendations(FOLD_PATH)
+        evalu.load_model(RS, FOLD_PATH, split)
         return RS
 
     if args.action.find('train') > -1:
