@@ -46,13 +46,17 @@ def arg_parsing(args=None):
     parser.add_argument('--ensemble', help='--ensemble ENSEMBLE_CONFIG. \
     Do ensemble. Use with --varpar --config')
     parser.add_argument('--varpar', help='--varpar param_name=value')
-    parser.add_argument('--set', help='--set test|valid, to use with metrics and plot action')
+    parser.add_argument('--set', default='valid', type=str,
+                        help='--set test|valid, to use with metrics and plot action')
 
-    parser.add_argument('--type', help='--type metrics|PR, to use with plot action')
-    parser.add_argument('--atN', help='--atN N, to use with metrics plot')
+    parser.add_argument('--type', default='metrics', type=str,
+                        help='--type metrics|PR, to use with plot action')
+    parser.add_argument('--atN', default=20, type=int,
+                        help='--atN N, to use with metrics plot')
     parser.add_argument('--xaxis', help='--xaxis param_name, which param will be on x axis in a metrics plot')
 
     parser.add_argument('--notify', action='store_true')
+    parser.add_argument('--final', action='store_true')
 
 
     args = parser.parse_args(args)
@@ -306,13 +310,11 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
 
 
 def run_ensemble(args, conf, ensemble_conf, exp_db):
+    '''
+    Process varpar
+    '''
     varpar = args.varpar.split('=')[0]
     values = args.varpar.split('=')[1].split(',')
-    RS_list = []
-    for v in values:
-        conf.set_par(varpar, v)
-        RS_folds = run_exp(args, conf, exp_db)
-        RS_list.append(RS_folds)
 
     '''
     Create expID for ensemble exp
@@ -338,6 +340,16 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
     split_fname_prefix = \
         exp_db.get_arg_val(single_exp_id, 'split_fname_prefix', conf)
 
+    '''
+    Load RS_list
+    '''
+    if args.action.find('train') > -1:
+        RS_list = []
+        for v in values:
+            conf.set_par(varpar, v)
+            RS_folds = run_exp(args, conf, exp_db)
+            RS_list.append(RS_folds)
+
     for fold in range(conf.nfolds):
         ens = ensemble_conf.Ens_type(**ensemble_conf.Ens_args)
         exp_db.set_arg_val(EXP_ID, 'split_fname_prefix', split_fname_prefix)
@@ -348,10 +360,9 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
         else:
             split = evalu.load_split(split_fname_prefix, fold)
 
-        for i, v in enumerate(values):
-            ens.RS_list.append(RS_list[i][fold])
-
         if args.action.find('train') > -1:
+            for i, v in enumerate(values):
+                ens.RS_list.append(RS_list[i][fold])
             t0 = time.time()
             evalu.ensemble_train_save(ens, FOLD_PATH, split)
             tr_dt = time.time() - t0
