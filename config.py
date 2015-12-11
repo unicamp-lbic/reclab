@@ -162,7 +162,7 @@ dummydelicious = Config(
     RS_args={},
     is_MF=False,
     nfolds=1,
-    threshold=0,
+    threshold=0.5,
     pct_hidden=0.2
 )
 
@@ -192,7 +192,7 @@ IBdelicious = Config(
              'weighting': 'none'},
     nfolds=1,
     is_MF=False,
-    threshold=0,
+    threshold=0.5,
     pct_hidden=0.2
 )
 
@@ -221,7 +221,7 @@ UBdelicious = Config(
              'weighting': 'none'},
     nfolds=1,
     is_MF=False,
-    threshold=0,
+    threshold=0.5,
     pct_hidden=0.2
 )
 
@@ -257,7 +257,7 @@ BMFdelicious = Config(
              'weighting': 'none'},
     nfolds=1,
     is_MF=True,
-    threshold=0,
+    threshold=0.5,
     pct_hidden=0.2
 )
 
@@ -297,7 +297,7 @@ BMFLSHdelicious = Config(
              'n_candidates': 2},
     nfolds=1,
     is_MF=True,
-    threshold=0,
+    threshold=0.5,
     pct_hidden=0.2
 )
 
@@ -337,7 +337,7 @@ BMFRPdelicious = Config(
              'weighting': 'none'},
     nfolds=1,
     is_MF=True,
-    threshold=0,
+    threshold=0.5,
     pct_hidden=0.2
 )
 
@@ -381,7 +381,7 @@ BMFRPLSHdelicious = Config(
              'n_candidates': 2},
     nfolds=1,
     is_MF=True,
-    threshold=0,
+    threshold=0.5,
     pct_hidden=0.2
 )
 
@@ -404,7 +404,7 @@ SVDdelicious = Config(
              'regularization': 0.01},
     nfolds=1,
     is_MF=True,
-    threshold=0,
+    threshold=0.5,
     pct_hidden=0.2
 )
 
@@ -440,7 +440,7 @@ SVDNNdelicious = Config(
              'weighting': 'none'},
     nfolds=1,
     is_MF=True,
-    threshold=0,
+    threshold=0.5,
     pct_hidden=0.2
 )
 
