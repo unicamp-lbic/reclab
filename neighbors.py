@@ -29,7 +29,7 @@ class kNN(object):
         if keepgraph:
             mat = \
                 self.estimator.kneighbors_graph(
-                    n_neighbors=min(X.shape[0], self.estimator.n_neighbors),
+                    X, n_neighbors=min(X.shape[0], self.estimator.n_neighbors),
                     mode='distance')
             self.graph = {}
             for i, line in enumerate(mat):
