@@ -143,6 +143,20 @@ class MatrixDatabase(BaseDatabase):
             else:
                 return BaseDatabase.get_rating(self, user_id, item_id)
 
+    def set_rating(self, user_id, item_id, rating):
+        self.matrix[user_id, item_id] = rating
+        self.matrix_csc = None
+        self.matrix_dok = None
+
+        self.thresholded = None
+        self.thresholded_csc = None
+
+        self.zero_mean_matrix = None
+        self.zero_mean_matrix_csc = None
+        self.zero_mean_matrix_dok = None
+
+        self.means = {}
+
     def get_user_vector(self, user_id, zero_mean=False, sparse=False):
         if zero_mean:
             if self.zero_mean_matrix is None:
