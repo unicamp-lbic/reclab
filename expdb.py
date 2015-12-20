@@ -19,7 +19,9 @@ ARGS = {'MF':'MF_file_prefix',
         'split': 'split_fname_prefix',
         'train':  'train_file_prefix',
         'rec': 'rec_file_prefix',
-        'metrics': 'metrics_file_prefix'}
+        'metrics': 'metrics_file_prefix',
+        'final_train': 'final_train_file_prefix',
+        'final_rec': 'final_rec_file_prefix',}
 
 
 class ExperimentDB(object):

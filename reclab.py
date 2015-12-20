@@ -60,6 +60,8 @@ def arg_parsing(args=None):
 
 
     args = parser.parse_args(args)
+    if args.final:
+        args.set = 'test'
     return args
 
 def main(args=None):
@@ -239,7 +241,9 @@ def run_exp(args, conf, exp_db):
     Run experiment
     '''
     RS_list = []
-    if args.folds is not None:
+    if args.final:
+        folds=[0]
+    elif args.folds is not None:
         folds = [int(x) for x in args.folds.split(',') if int(x) < conf.nfolds]
     else:
         folds = [x for x in range(conf.nfolds)]
@@ -267,33 +271,36 @@ def run_fold(args, fold, conf, EXP_ID, RESULT_FOLDER, exp_db, split_fname_prefix
     if args.action.find('train') > -1:
         # Gen/Load MF if applicable
         if conf.is_MF:
-            MF_file_prefix = exp_db.get_fold_arg_val(EXP_ID, fold, 'MF_file_prefix', conf)
-            mf_dt = exp_db.get_fold_arg_val(EXP_ID, fold, 'MF_time', conf)
+            MF_file_prefix = exp_db.get_fold_arg_val(EXP_ID, fold, ('final_'*args.final) + 'MF_file_prefix', conf)
+            mf_dt = exp_db.get_fold_arg_val(EXP_ID, fold, ('final_'*args.final) + 'MF_time', conf)
             if MF_file_prefix is None:
                 MF_file_prefix = FOLD_PATH
                 t0 = time.time()
-                evalu.gen_mf(split, MF_file_prefix, RS)
+                evalu.gen_mf(split, MF_file_prefix, RS, args.final)
                 mf_dt = time.time() - t0
-            exp_db.set_fold_arg_val(EXP_ID, fold, 'MF_time', mf_dt)
-            exp_db.set_fold_arg_val(EXP_ID, fold, 'MF_file_prefix', MF_file_prefix)
-            RS = evalu.load_mf(MF_file_prefix, RS)
+            exp_db.set_fold_arg_val(EXP_ID, fold, ('final_'*args.final) + 'MF_time', mf_dt)
+            exp_db.set_fold_arg_val(EXP_ID, fold, ('final_'*args.final) + 'MF_file_prefix', MF_file_prefix)
+            RS = evalu.load_mf(MF_file_prefix, RS, args.final)
         # train and save
         t0 = time.time()
-        evalu.train_save(RS, split, FOLD_PATH)
+        evalu.train_save(RS, split, FOLD_PATH, args.final)
         tr_dt = time.time() - t0
-        exp_db.set_fold_arg_val(EXP_ID, fold, 'train_file_prefix', FOLD_PATH)
-        exp_db.set_fold_arg_val(EXP_ID, fold, 'train_time', tr_dt)
+        exp_db.set_fold_arg_val(EXP_ID, fold, ('final_'*args.final) + 'train_file_prefix', FOLD_PATH)
+        exp_db.set_fold_arg_val(EXP_ID, fold, ('final_'*args.final) + 'train_time', tr_dt)
 
     if args.action.find('rec') > -1:
         t0 = time.time()
-        evalu.rec_save(RS, FOLD_PATH, split)
+        evalu.rec_save(RS, FOLD_PATH, split, args.final)
         tst_dt = time.time() - t0
-        exp_db.set_fold_arg_val(EXP_ID, fold, 'rec_file_prefix', FOLD_PATH)
-        exp_db.set_fold_arg_val(EXP_ID, fold, 'rec_time', tst_dt)
+        exp_db.set_fold_arg_val(EXP_ID, fold, ('final_'*args.final) + 'rec_file_prefix', FOLD_PATH)
+        exp_db.set_fold_arg_val(EXP_ID, fold, ('final_'*args.final) + 'rec_time', tst_dt)
 
     if args.action.find('metrics') > -1:
-        metrics = evalu.Metrics(split, filepath=FOLD_PATH)
-        metrics.def_test_set(args.set)
+        metrics = evalu.Metrics(split, filepath=FOLD_PATH, final=args.final)
+        if args.final:
+            metrics.def_test_set('test')
+        else:
+            metrics.def_test_set(args.set)
         if args.action.replace('train','').replace('rec','') == 'metrics':
             metrics.error_metrics()
             metrics.list_metrics(conf.threshold)
@@ -350,7 +357,13 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
             RS_folds = run_exp(args, conf, exp_db)
             RS_list.append(RS_folds)
 
-    for fold in range(conf.nfolds):
+    if args.final:
+        folds=[0]
+    elif args.folds is not None:
+        folds = [int(x) for x in args.folds.split(',') if int(x) < conf.nfolds]
+    else:
+        folds = [x for x in range(conf.nfolds)]
+    for fold in folds:
         ens = ensemble_conf.Ens_type(**ensemble_conf.Ens_args)
         exp_db.set_arg_val(EXP_ID, 'split_fname_prefix', split_fname_prefix)
         FOLD_PREFIX =  'fold_%d' % fold
@@ -366,19 +379,22 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
             t0 = time.time()
             evalu.ensemble_train_save(ens, FOLD_PATH, split)
             tr_dt = time.time() - t0
-            exp_db.set_fold_arg_val(EXP_ID, fold, 'train_file_prefix', FOLD_PATH)
-            exp_db.set_fold_arg_val(EXP_ID, fold, 'train_time', tr_dt)
+            exp_db.set_fold_arg_val(EXP_ID, fold, ('final_'*args.final) + 'train_file_prefix', FOLD_PATH)
+            exp_db.set_fold_arg_val(EXP_ID, fold, ('final_'*args.final) + 'train_time', tr_dt)
 
         if args.action.find('rec') > -1:
             t0 = time.time()
             evalu.ensemble_rec_save(ens, FOLD_PATH, split)
             tst_dt = time.time() - t0
-            exp_db.set_fold_arg_val(EXP_ID, fold, 'rec_file_prefix', FOLD_PATH)
-            exp_db.set_fold_arg_val(EXP_ID, fold, 'rec_time', tst_dt)
+            exp_db.set_fold_arg_val(EXP_ID, fold, ('final_'*args.final) + 'rec_file_prefix', FOLD_PATH)
+            exp_db.set_fold_arg_val(EXP_ID, fold, ('final_'*args.final) + 'rec_time', tst_dt)
 
         if args.action.find('metrics') > -1:
             metrics = evalu.Metrics(split, filepath=FOLD_PATH)
-            metrics.def_test_set(args.set)
+            if args.final:
+                metrics.def_test_set('test')
+            else:
+                metrics.def_test_set(args.set)
             if args.action.replace('train','').replace('rec','') == 'metrics':
                 metrics.error_metrics()
                 metrics.list_metrics(conf.threshold)

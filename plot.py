@@ -157,7 +157,8 @@ def single_bar_plot(df, metric, **plotargs):
     yerr = df[metric].values[0][1]
     height = yerr
     bottom = y - 0.5 * height
-    plt.bar(left, height, width, bottom, color=colors[__plot_count % len(colors)], **plotargs)
+    plt.bar(left, height, width, bottom,
+            color=colors[__plot_count % len(colors)], **plotargs)
     plt.errorbar(x, y, yerr, marker='+', color='k')
 #    plt.errorbar(x, y, yerr, marker='s', markersize=6,
 #                 color=colors[__plot_count], **plotargs)
@@ -178,11 +179,12 @@ def get_xy(ids, exp_db, metric_names, x_axis=None):
             if metric is 'train_time' and df['is_MF'].values[0]:
                 total_time = df[metric].values + df['MF_time'].values
                 metric_values[metric].append(
-                    (total_time.mean(), total_time.std()))
+                    (np.nanmean(total_time), np.nanstd(total_time)))
             else:
                 try:
                     metric_values[metric].append(
-                        (df[metric].values.mean(), df[metric].values.std()))
+                        (np.nanmean(df[metric].values),
+                         np.nanstd(df[metric].values)))
                 except KeyError:
                     print('Metric %s not available' % metric)
 

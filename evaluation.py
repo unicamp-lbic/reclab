@@ -14,6 +14,14 @@ MF_SUFFIX = '_mf.pkl'
 TRAIN_SUFFIX = '_train.pkl'
 REC_SUFFIX = '_rec.pkl'
 
+FINAL_MF_SUFFIX = '_mf_final.pkl'
+FINAL_TRAIN_SUFFIX = '_train_final.pkl'
+FINAL_REC_SUFFIX = '_rec_final.pkl'
+
+def merge_train_valid(split):
+    for user in split.valid:
+        for item, rating in split.valid[user]:
+            split.train.set_rating(user, item, rating)
 
 def load_split(split_fname_prefix, fold=None):
     if fold is None:
@@ -26,48 +34,91 @@ def load_split(split_fname_prefix, fold=None):
     return split
 
 
-def gen_mf(split, filepath, RS, **MF_args):
+def gen_mf(split, filepath, RS, final=False, **MF_args):
+    if final:
+        merge_train_valid(split)
     matrices = RS.gen_mf(split.train, **MF_args)
-    fname = filepath + MF_SUFFIX
+    fname = filepath + (MF_SUFFIX if not final else FINAL_MF_SUFFIX)
     to_gzpickle(matrices, fname)
 
 
-def load_mf(filepath, RS):
-    fname = filepath + MF_SUFFIX
+def load_mf(filepath, RS, final=False):
+    fname = filepath + (MF_SUFFIX if not final else FINAL_MF_SUFFIX)
     matrices = read_gzpickle(fname)
     RS.load_mf(*matrices)
     return RS
 
 
-def train_save(RS, split, out_filepath):
+def train_save(RS, split, out_filepath, final=False):
+    if final:
+        merge_train_valid(split)
     RS.fit(split.train)
-    RS.save(out_filepath+TRAIN_SUFFIX)
+    if not final:
+        out_name = out_filepath+TRAIN_SUFFIX
+    else:
+        out_name = out_filepath+FINAL_TRAIN_SUFFIX
+    RS.save(out_name)
 
 
-def rec_save(RS, out_filepath, split):
-    RS.load(out_filepath+TRAIN_SUFFIX, split.train)
+def rec_save(RS, out_filepath, split, final=False):
+    if final:
+        for user in split.valid:
+            for item, rating in split.valid[user]:
+                split.train.set_rating(user, item, rating)
+    if not final:
+        RS.load(out_filepath+TRAIN_SUFFIX, split.train)
+        out_name = out_filepath+REC_SUFFIX
+    else:
+        RS.load(out_filepath+FINAL_TRAIN_SUFFIX, split.train)
+        out_name = out_filepath+FINAL_REC_SUFFIX
     rec = SavedRecommendations()
-    rec.save(out_filepath+REC_SUFFIX, RS)
+    rec.save(out_name, RS)
 
 
-def ensemble_train_save(ens, out_filepath, split):
+def ensemble_train_save(ens, out_filepath, split, final=False):
+    if final:
+        for user in split.valid:
+            for item, rating in split.valid[user]:
+                split.train.set_rating(user, item, rating)
     ens.fit(split)
-    ens.save(out_filepath+TRAIN_SUFFIX)
+    if not final:
+        out_name = out_filepath+TRAIN_SUFFIX
+    else:
+        out_name = out_filepath+FINAL_TRAIN_SUFFIX
+    ens.save(out_name)
 
 
-def ensemble_rec_save(ens, out_filepath, split):
-    ens.load(out_filepath+TRAIN_SUFFIX, split.train)
+
+def ensemble_rec_save(ens, out_filepath, split, final=False):
+    if final:
+        for user in split.valid:
+            for item, rating in split.valid[user]:
+                split.train.set_rating(user, item, rating)
     rec = SavedRecommendations()
-    rec.save(out_filepath+REC_SUFFIX, ens)
+    if not final:
+        ens.load(out_filepath+TRAIN_SUFFIX, split.train)
+        out_name = out_filepath+REC_SUFFIX
+    else:
+        ens.load(out_filepath+FINAL_TRAIN_SUFFIX, split.train)
+        out_name = out_filepath+FINAL_REC_SUFFIX
+    rec.save(out_name, ens)
 
 
-def load_model(RS, out_filepath, split):
-    RS.load(out_filepath+TRAIN_SUFFIX, split.train)
+def load_model(RS, out_filepath, split, final=False):
+    if not final:
+        out_name = out_filepath+TRAIN_SUFFIX
+    else:
+        out_name = out_filepath+FINAL_TRAIN_SUFFIX
+    RS.load(out_name, split.train)
 
 
-def load_recommendations(filepath):
+def load_recommendations(filepath, final=False):
+    if not final:
+        out_name = filepath+REC_SUFFIX
+    else:
+        out_name = filepath+FINAL_REC_SUFFIX
     rec = SavedRecommendations()
-    rec.load(filepath+REC_SUFFIX)
+    rec.load(out_name)
     return rec
 
 
@@ -93,16 +144,21 @@ class Metrics(object):
     def ensemble_metrics_names():
         return ['kendalltau', 'stddev']
 
-    def __init__(self, split, filepath=None, RS=None):
+    def __init__(self, split, filepath=None, RS=None, final=False):
         self.RS = SavedRecommendations()
         if RS is not None:
             self.RS = RS
         elif filepath is not None:
-            self.RS.load(filepath+REC_SUFFIX)
+            if not final:
+                self.RS.load(filepath+REC_SUFFIX)
+            else:
+                self.RS.load(filepath+FINAL_REC_SUFFIX)
         else:
             raise ValueError('Must inform either path to recommender\
             or a recommender object')
         self.split = split
+        if final:
+            merge_train_valid(self.split)
         self.test_set = None
         self.which = None
         self.metrics = dict()
