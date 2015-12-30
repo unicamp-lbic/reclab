@@ -65,6 +65,8 @@ def time_plot(exp_db, conf, sweep, value, args):
     if args.set is None:
         raise ValueError('must inform --set valid|test')
     metric_names = ['train_time','rec_time']
+    if args.final:
+        metric_names = ['final_' + m for m in metric_names]
     select = conf.as_dict()
     ids = exp_db.get_ids_dict(select)
     if ids is None:
@@ -176,8 +178,9 @@ def get_xy(ids, exp_db, metric_names, x_axis=None):
         if x_axis is not None:
             x_values.append(df[x_axis].values[0])
         for metric in metric_names:
-            if metric is 'train_time' and df['is_MF'].values[0]:
-                total_time = df[metric].values + df['MF_time'].values
+            if  metric.find('train_time') > -1 and df['is_MF'].values[0]:
+                pref = metric.replace('train_time', '')
+                total_time = df[metric].values + df[pref+'MF_time'].values
                 metric_values[metric].append(
                     (np.nanmean(total_time), np.nanstd(total_time)))
             else:
