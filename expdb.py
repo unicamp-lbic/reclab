@@ -20,6 +20,8 @@ ARGS = {'MF':'MF_file_prefix',
         'train':  'train_file_prefix',
         'rec': 'rec_file_prefix',
         'metrics': 'metrics_file_prefix',
+        'final_MF':'MF_file_prefix',
+        'MF_time':'MF_time',
         'final_train': 'final_train_file_prefix',
         'final_rec': 'final_rec_file_prefix',}
 
@@ -100,14 +102,17 @@ class ExperimentDB(object):
                 did not find value for this experiment
                 try to locate compatible experiment for specific args
                 '''
-                if arg_name == ARGS['split'] or arg_name == ARGS['MF'] \
-                    or arg_name == ARGS['MF_time']:
+                if arg_name == ARGS['split'] or arg_name == ARGS['MF'] or \
+                    arg_name == ARGS['final_MF'] or arg_name == ARGS['MF_time']\
+                    or arg_name == ARGS['final_MF_time']:
                     select = {'database': conf.database,
                               'nfolds': conf.nfolds,
                               'per_user': conf.per_user,
                               'pct_hidden': conf.pct_hidden}
 
-                    if arg_name == ARGS['MF']:
+                    if arg_name == ARGS['MF'] or arg_name == ARGS['final_MF']\
+                        or arg_name == ARGS['MF_time']\
+                        or arg_name == ARGS['final_MF_time']:
                         select.update({'MF_type': conf.MF_type})
                         select.update(conf.MF_args)
 
