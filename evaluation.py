@@ -38,7 +38,7 @@ def gen_mf(split, filepath, RS, final=False, **MF_args):
     if final:
         merge_train_valid(split)
     fname = filepath + (MF_SUFFIX if not final else FINAL_MF_SUFFIX)
-    print('Generating MF', filename)
+    print('Generating MF', fname)
     matrices = RS.gen_mf(split.train, **MF_args)
     to_gzpickle(matrices, fname)
     print('Done!')
