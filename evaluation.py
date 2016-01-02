@@ -28,51 +28,59 @@ def load_split(split_fname_prefix, fold=None):
         fname = split_fname_prefix + '_split.pkl'
     else:
         fname = split_fname_prefix + '_split_%d.pkl' % fold
-
+    print('Loading split', fname)
     split = read_gzpickle(fname)
-
+    print('Done!')
     return split
 
 
 def gen_mf(split, filepath, RS, final=False, **MF_args):
     if final:
         merge_train_valid(split)
-    matrices = RS.gen_mf(split.train, **MF_args)
     fname = filepath + (MF_SUFFIX if not final else FINAL_MF_SUFFIX)
+    print('Generating MF', filename)
+    matrices = RS.gen_mf(split.train, **MF_args)
     to_gzpickle(matrices, fname)
-
+    print('Done!')
 
 def load_mf(filepath, RS, final=False):
     fname = filepath + (MF_SUFFIX if not final else FINAL_MF_SUFFIX)
+    print('Loading MF', fname)
     matrices = read_gzpickle(fname)
     RS.load_mf(*matrices)
+    print('Done!')
     return RS
 
 
 def train_save(RS, split, out_filepath, final=False):
     if final:
         merge_train_valid(split)
+    print('Training')
     RS.fit(split.train)
     if not final:
         out_name = out_filepath+TRAIN_SUFFIX
     else:
         out_name = out_filepath+FINAL_TRAIN_SUFFIX
+    print('Saving', out_name)
     RS.save(out_name)
-
+    print('Done!')
 
 def rec_save(RS, out_filepath, split, final=False):
     if final:
         for user in split.valid:
             for item, rating in split.valid[user]:
                 split.train.set_rating(user, item, rating)
+    print('Loading model')
     if not final:
         RS.load(out_filepath+TRAIN_SUFFIX, split.train)
         out_name = out_filepath+REC_SUFFIX
     else:
         RS.load(out_filepath+FINAL_TRAIN_SUFFIX, split.train)
         out_name = out_filepath+FINAL_REC_SUFFIX
+    print('Recommending', out_name)
     rec = SavedRecommendations()
     rec.save(out_name, RS)
+    print('Done!')
 
 
 def ensemble_train_save(ens, out_filepath, split, final=False):
@@ -80,12 +88,15 @@ def ensemble_train_save(ens, out_filepath, split, final=False):
         for user in split.valid:
             for item, rating in split.valid[user]:
                 split.train.set_rating(user, item, rating)
+    print('Training')
     ens.fit(split)
     if not final:
         out_name = out_filepath+TRAIN_SUFFIX
     else:
         out_name = out_filepath+FINAL_TRAIN_SUFFIX
+    print('Saving', out_name)
     ens.save(out_name)
+    print('Done!')
 
 
 
@@ -95,13 +106,16 @@ def ensemble_rec_save(ens, out_filepath, split, final=False):
             for item, rating in split.valid[user]:
                 split.train.set_rating(user, item, rating)
     rec = SavedRecommendations()
+    print('Loading model')
     if not final:
         ens.load(out_filepath+TRAIN_SUFFIX, split.train)
         out_name = out_filepath+REC_SUFFIX
     else:
         ens.load(out_filepath+FINAL_TRAIN_SUFFIX, split.train)
         out_name = out_filepath+FINAL_REC_SUFFIX
+    print('Recommending', out_name)
     rec.save(out_name, ens)
+    print('Done!')
 
 
 def load_model(RS, out_filepath, split, final=False):
@@ -109,7 +123,9 @@ def load_model(RS, out_filepath, split, final=False):
         out_name = out_filepath+TRAIN_SUFFIX
     else:
         out_name = out_filepath+FINAL_TRAIN_SUFFIX
+    print('Loading model', out_name)
     RS.load(out_name, split.train)
+    print('Done!')
 
 
 def load_recommendations(filepath, final=False):
@@ -118,7 +134,9 @@ def load_recommendations(filepath, final=False):
     else:
         out_name = filepath+FINAL_REC_SUFFIX
     rec = SavedRecommendations()
+    print('Loading recomendations', out_name)
     rec.load(out_name)
+    print('Done!')
     return rec
 
 
