@@ -53,7 +53,6 @@ def plot_PR(df, metric_names,**plot_args):
         x.append(values[atN]['R'][0][0])
         xerr.append(values[atN]['R'][0][1])
 
-
     plt.errorbar(x, y, yerr, xerr, **plot_args)
     plt.grid('on', which='both')
     plt.ylabel('Precision')
@@ -130,6 +129,7 @@ def metrics(exp_db, conf, sweep, value, args):
         plt.gcf().set_size_inches(8, 4, forward=True)
         plot_metrics_xaxis(df, args.xaxis , metric_names,
                      label=RS_name+' '+sweep.replace('_', ' ')+'='+str(value))
+   print(df)
 
 # static
 __plot_count = 0
@@ -159,15 +159,19 @@ def single_bar_plot(df, metric, **plotargs):
     yerr = df[metric].values[0][1]
     height = yerr
     bottom = y - 0.5 * height
-    plt.bar(left, height, width, bottom,
-            color=colors[__plot_count % len(colors)], **plotargs)
-    plt.errorbar(x, y, yerr, marker='+', color='k')
-#    plt.errorbar(x, y, yerr, marker='s', markersize=6,
-#                 color=colors[__plot_count], **plotargs)
+    if height > 0:
+        plt.bar(left, height, width, bottom,
+                color=colors[__plot_count % len(colors)], **plotargs)
+        plt.errorbar(x, y, yerr, marker='+', color='k')
+    else:
+        plt.plot(x, y, marker='s', markersize=6,
+                 color=colors[__plot_count], **plotargs)
     plt.title(metric.replace('_', ' '), fontsize='small')
     plt.yticks(fontsize='small')
     plt.gca().get_xaxis().set_visible(False)
     plt.grid('on', axis='y', which='both')
+    print(metric)
+    print(y,yerr)
 
 
 def get_xy(ids, exp_db, metric_names, x_axis=None):
