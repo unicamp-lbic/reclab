@@ -216,11 +216,11 @@ class WAvgRatingEnsemble(RatingEnsemble):
 
 
 class LinRegRatingEnsemble(RatingEnsemble):
-    def __init__(self, regularization=1.0, l1_ratio=0.5, keep=1):
+    def __init__(self, ens_reg=1.0, l1_ratio=0.5, keep=1):
         self.diversity_measures = []
         self.keep = keep
         self.RS_list = []
-        self.regularization = regularization
+        self.ens_reg = ens_reg
         self.l1_ratio = l1_ratio
 
         '''
@@ -228,7 +228,7 @@ class LinRegRatingEnsemble(RatingEnsemble):
         It has both l1 and l2 penalties:
         alpha * [ (l1_ratio) * l1_penalty + (1-l1_ratio) * l2_penalty]
         '''
-        self.model = ElasticNet(alpha=regularization,
+        self.model = ElasticNet(alpha=ens_reg,
                                 l1_ratio=l1_ratio, positive=True)
 
     def fit(self, split):

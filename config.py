@@ -451,7 +451,7 @@ WAvg = EnsembleConfig(
 
 LinReg = EnsembleConfig(
     Ens_type=ens.LinRegRatingEnsemble,
-    Ens_args={'regularization': 1.0,
+    Ens_args={'ens_reg': 1.0,
               'l1_ratio': 0.1,
               'keep': 0.25}
 )

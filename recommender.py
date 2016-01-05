@@ -430,7 +430,7 @@ class SVDrecommender(MFrecommender):
     __MF_type__ = SVD
 
     def __MF_args__(RS_args):
-        args = ['dim', 'regularization']
+        args = [a for a in ['dim', 'regularization'] if a in RS_args]
         return dict([(arg, RS_args[arg]) for arg in args])
 
     def __init__(self, dim=50, regularization=0.1):

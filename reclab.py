@@ -322,7 +322,6 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
     '''
     varpar = args.varpar.split('=')[0]
     values = args.varpar.split('=')[1].split(',')
-
     '''
     Create expID for ensemble exp
     '''
@@ -343,7 +342,10 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
     '''
     Get split_fname_prefix from exp_db.
     '''
+    conf.set_par(varpar, values[0])
     single_exp_id = exp_db.get_id(conf)
+    if single_exp_id is None:
+        raise RuntimeError('Base experiemnt not available for ensembling')
     split_fname_prefix = \
         exp_db.get_arg_val(single_exp_id, 'split_fname_prefix', conf)
 
