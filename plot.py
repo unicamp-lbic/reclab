@@ -129,7 +129,7 @@ def metrics(exp_db, conf, sweep, value, args):
         plt.gcf().set_size_inches(8, 4, forward=True)
         plot_metrics_xaxis(df, args.xaxis , metric_names,
                      label=RS_name+' '+sweep.replace('_', ' ')+'='+str(value))
-   print(df)
+    print(df)
 
 # static
 __plot_count = 0
