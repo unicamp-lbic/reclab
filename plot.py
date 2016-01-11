@@ -215,6 +215,9 @@ def plot_metrics_xaxis(dataframe, x_axis, metrics,
     plt.subplots_adjust(top=0.9)
     if suptitle is not None:
         plt.suptitle(suptitle)
+    ax = plt.gca()
+    ax.relim()
+    ax.autoscale_view()
     plt.legend(loc='upper left', bbox_to_anchor=(1.1, 1),
                fontsize='x-small', framealpha=0.8)
 
@@ -234,3 +237,6 @@ def plot_single_metric_xaxis(df, x_axis, metric, **plotargs):
     plt.xticks(fontsize='small')
     plt.xlabel(x_axis.replace('_', ' '), fontsize='small')
     plt.grid('on', which='both')
+    ax = plt.gca()
+    ax.relim()
+    ax.autoscale_view()
