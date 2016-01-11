@@ -137,8 +137,8 @@ __plot_count = 0
 
 def bar_plot_metrics(dataframe, metrics, suptitle=None, **plotargs):
     global __plot_count
-    width = int(np.ceil(np.sqrt(len(metrics))))
-    height = int(np.ceil(len(metrics)/width))
+    width = max(int(np.ceil(np.sqrt(len(metrics)))), 3)
+    height = int(np.ceil((len(metrics))/width))
     plt.gcf().set_size_inches(4*width, 3*height, forward=True)
     for i, metric in enumerate(metrics):
         plt.subplot(height, width, i+1)
