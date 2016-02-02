@@ -14,14 +14,15 @@ RESULTS_FOLDER = 'results/'
 DBLOCK = RESULTS_FOLDER + 'expdb.lock'
 DBFILE = RESULTS_FOLDER + 'experiments.db'
 
-ARGS = {'MF':'MF_file_prefix',
-        'MF_time':'MF_time',
+ARGS = {'MF': 'MF_file_prefix',
+        'MF_time': 'MF_time',
         'split': 'split_fname_prefix',
         'train':  'train_file_prefix',
         'rec': 'rec_file_prefix',
         'metrics': 'metrics_file_prefix',
-        'final_MF':'MF_file_prefix',
-        'MF_time':'MF_time',
+        'final_MF': 'MF_file_prefix',
+        'MF_time': 'MF_time',
+        'final_MF_time': 'final_MF_time',
         'final_train': 'final_train_file_prefix',
         'final_rec': 'final_rec_file_prefix',}
 
