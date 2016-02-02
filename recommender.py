@@ -101,7 +101,7 @@ class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
         self.weighting = weighting
         self.metric = metric
         self.offline_kNN = offline_kNN
-        self.kNN = neighbors.kNN(n_neighbors=self.model_size,
+        self.kNN = neighbors.kNN(n_neighbors=self.n_neighbors,
                                  algorithm=algorithm, metric=metric, **kNN_args)
 
     def fit(self, database):
