@@ -106,7 +106,7 @@ class ItemBased(RatingPredictor, NeighborStrategy, PredictionStrategy):
 
     def fit(self, database):
         self.model_size = int(np.ceil(self.model_size * database.n_items()))
-        self.kNN.estimator.n_neighbors = max(self.n_neighbors, self.model_size)
+        self.kNN.set_neighbors(max(self.n_neighbors, self.model_size))
         self.database = database
         if self.offline_kNN:
             matrix, user_means = self.database.get_matrix(zero_mean='users',
@@ -354,11 +354,11 @@ class BMFrecommender(MFNNrecommender, NeighborStrategy, PredictionStrategy):
         if self.offline_kNN:
             if self.neighbor_type == 'user':
                 self.model_size = int(np.ceil(self.model_size * database.n_users()))
-                self.kNN.estimator.n_neighbors = max(self.model_size, self.n_neighbors)
+                self.kNN.set_neighbors(max(self.n_neighbors, self.model_size))
                 self.kNN.fit(self.P, keepgraph=True)
             elif self.neighbor_type == 'item':
                 self.model_size = int(np.ceil(self.model_size * database.n_items()))
-                self.kNN.estimator.n_neighbors = max(self.model_size, self.n_neighbors)
+                self.kNN.set_neighbors(max(self.n_neighbors, self.model_size))
                 self.kNN.fit(self.Q, keepgraph=True)
             else:
                 raise ValueError('Invalid neighbor_type "%s" parameter passed \
@@ -416,14 +416,14 @@ class BMFRPrecommender(BMFrecommender):
             self.P = self.RP.fit_transform(self.P)
             if self.offline_kNN:
                 self.model_size = int(np.ceil(self.model_size * database.n_users()))
-                self.kNN.estimator.n_neighbors = max(self.model_size, self.n_neighbors)
+                self.kNN.set_neighbors(max(self.n_neighbors, self.model_size))
                 self.kNN.fit(self.P, keepgraph=True)
 
         elif self.neighbor_type == 'item':
             self.Q = self.RP.fit_transform(self.Q)
             if self.offline_kNN:
                 self.model_size = int(np.ceil(self.model_size * database.n_items()))
-                self.kNN.estimator.n_neighbors = max(self.model_size, self.n_neighbors)
+                self.kNN.set_neighbors(max(self.n_neighbors, self.model_size))
                 self.kNN.fit(self.Q, keepgraph=True)
         else:
             raise ValueError('Invalid neighbor_type parameter passed to\
@@ -486,11 +486,11 @@ class SVDNNrecommender(SVDrecommender, MFNNrecommender):
         if self.offline_kNN:
             if self.neighbor_type == 'user':
                 self.model_size = int(np.ceil(self.model_size * database.n_users()))
-                self.kNN.estimator.n_neighbors = max(self.model_size, self.n_neighbors)
+                self.kNN.set_neighbors(max(self.n_neighbors, self.model_size))
                 self.kNN.fit(self.P, keepgraph=True)
             elif self.neighbor_type == 'item':
                 self.model_size = int(np.ceil(self.model_size * database.n_items()))
-                self.kNN.estimator.n_neighbors = max(self.model_size, self.n_neighbors)
+                self.kNN.set_neighbors(max(self.n_neighbors, self.model_size))
                 self.kNN.fit(self.Q, keepgraph=True)
             else:
                 raise ValueError('Invalid neighbor_type "%s" parameter passed \

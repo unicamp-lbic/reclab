@@ -13,6 +13,7 @@ class kNN(object):
     def __init__(self, algorithm, metric, **kNN_args):
         self.estimator = None
         self.graph = None
+        self.algorithm = algorithm
         if not algorithm == 'LSH':
             self.estimator = \
                 NearestNeighbors(algorithm=algorithm, metric=metric, **kNN_args)
@@ -23,6 +24,11 @@ class kNN(object):
                 raise ValueError('LSH forest can only use cosine metric')
             self.estimator = \
                 LSHForest(**kNN_args)
+
+    def set_neighbors(self, n_neighbors):
+        if self.algorithm =='LSH':
+            self.estimator.n_candidates = n_neighbors*self.estimator.n_candidates/self.estimator.n_neighbors
+        self.estimator.n_neighbors=n_neighbors
 
     def fit(self, X, keepgraph=False):
         self.estimator = self.estimator.fit(X)
