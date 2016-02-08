@@ -151,7 +151,9 @@ class SavedRecommendations(RatingPredictor):
             # to get all the predratings
             lists[user] = RS.recommend(user, threshold=0)
             config = RS.config()
+        print('Saving', filepath)
         to_gzpickle((lists, config), filepath)
+        print('Done!')
 
     def load(self, filepath):
         self.lists, self.config = read_gzpickle(filepath)
