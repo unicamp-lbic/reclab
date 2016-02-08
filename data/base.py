@@ -45,7 +45,8 @@ def read_ml100k_matrix():
     j = np.array(j)-1
     matrix = sp.coo_matrix((data,(i, j)),
                                shape=(qtty['users'], qtty['items']))
-    return matrix
+    # dataset is small enough to be used in dense form (faster)
+    return matrix.toarray()
 
 def read_delicious():
     nusers =  1867
