@@ -49,7 +49,7 @@ class BaseEnsemble(BaseRecommender):
     def fit(self, split):
         "learn recommender model (neighborhood, matrix factorization, etc)"
         self.database = split.train
-        filter_RS_list(self.RS_list, split, self.keep)
+        self.RS_list = filter_RS_list(self.RS_list, split, self.keep)
         return self
 
     def is_ensemble(self):
@@ -83,7 +83,7 @@ def filter_RS_list(RS_list, split, keep=0.25):
         score = [(s, idx) for idx, s in enumerate(score)]
         score.sort()
         keep = [idx for s, idx in score[:int(len(score)*keep)]]
-        RS_list = [RS_list[idx] for idx in keep]
+        return [RS_list[idx] for idx in keep]
 
 
 class RatingEnsemble(BaseEnsemble, RatingPredictor):
