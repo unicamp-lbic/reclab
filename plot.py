@@ -88,7 +88,11 @@ def metrics(exp_db, conf, sweep, value, args):
     if args.set is None:
         raise ValueError('must inform --set valid|test')
 
-    if args.type.find('error') > -1:
+    if args.type.find('time') > -1:
+        metric_names = ['train_time','rec_time']
+        if args.final:
+            metric_names = ['final_' + m for m in metric_names]
+    elif args.type.find('error') > -1:
         metric_names =  evalu.Metrics.coverage_metric_names(args.set) + \
             evalu.Metrics.error_metric_names(args.set)
     elif args.type.find('coverage') > -1:
@@ -115,8 +119,6 @@ def metrics(exp_db, conf, sweep, value, args):
         bar_plot_metrics(df, metric_names,
                          label=RS_name+' '+sweep.replace('_',' ')+'='+str(value))
 
-        plt.legend(loc='upper left', bbox_to_anchor=(1,1), borderaxespad=2.0,
-                   fontsize='x-small', framealpha=0.8)
     else:
         del select[args.xaxis]
         ids = exp_db.get_ids_dict(select)
@@ -130,6 +132,8 @@ def metrics(exp_db, conf, sweep, value, args):
         plot_metrics_xaxis(df, args.xaxis , metric_names,
                      label=RS_name+' '+sweep.replace('_', ' ')+'='+str(value))
     print(df)
+    plt.legend(loc='upper left', bbox_to_anchor=(1,1), borderaxespad=2.0,
+               fontsize='x-small', framealpha=0.8)
 
 # static
 __plot_count = 0
@@ -205,7 +209,7 @@ def get_xy(ids, exp_db, metric_names, x_axis=None):
 
 def plot_metrics_xaxis(dataframe, x_axis, metrics,
                        suptitle=None, **plotargs):
-    width = int(np.ceil(np.sqrt(len(metrics))))
+    width = max(int(np.ceil(np.sqrt(len(metrics)))), 3)
     height = int(np.ceil(len(metrics)/width))
     plt.gcf().set_size_inches(4*width, 3*height, forward=True)
     for i, metric in enumerate(metrics):
