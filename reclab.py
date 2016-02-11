@@ -345,19 +345,10 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
     conf.set_par(varpar, values[0])
     single_exp_id = exp_db.get_id(conf)
     if single_exp_id is None:
-        raise RuntimeError('Base experiemnt not available for ensembling')
+        raise RuntimeError('Base experiment not available for ensembling')
     split_fname_prefix = \
         exp_db.get_arg_val(single_exp_id, 'split_fname_prefix', conf)
 
-    '''
-    Load RS_list
-    '''
-    if args.action.find('train') > -1:
-        RS_list = []
-        for v in values:
-            conf.set_par(varpar, v)
-            RS_folds = run_exp(args, conf, exp_db)
-            RS_list.append(RS_folds)
 
     if args.final:
         folds=[0]
@@ -376,8 +367,19 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
             split = evalu.load_split(split_fname_prefix, fold)
 
         if args.action.find('train') > -1:
-            for i, v in enumerate(values):
-                ens.RS_list.append(RS_list[i][fold])
+            '''
+            Load RS_list and train
+            '''
+            RS_list = []
+            for v in values:
+                conf.set_par(varpar, v)
+                single_exp_id = exp_db.get_id(conf)
+                filepath = exp_db.get_fold_arg_val(single_exp_id, fold, ('final_'*args.final) + 'train_file_prefix')
+                RS = conf.RS_type(**conf.RS_args)
+                if args.ensemble is not None:
+                    evalu.load_model(RS, filepath, split)
+                RS_list.append(RS)
+            ens.RS_list = RS_list
             t0 = time.time()
             evalu.ensemble_train_save(ens, FOLD_PATH, split)
             tr_dt = time.time() - t0
