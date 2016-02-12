@@ -160,7 +160,10 @@ class ExperimentDB(object):
         index = [(exp_id, i) for i in range(conf.nfolds)]
         index = pd.MultiIndex.from_tuples(index, names=['exp_id', 'fold'])
         df = pd.DataFrame(data, index=index)
-        self.db = self.db.append(df)
+        if len(self.db) == 0:
+            self.db = df
+        else:
+            self.db = self.db.append(df)
         self._save_db()
 
     @locked(DBLOCK)
