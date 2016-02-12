@@ -110,7 +110,7 @@ def metrics(exp_db, conf, sweep, value, args):
     if args.xaxis is None:
         ids = exp_db.get_ids_dict(select)
         if ids is None:
-            raise RuntimeError('No corresponding metrics available')
+            raise RuntimeError('No corresponding metrics available', select)
         df = get_xy(ids, exp_db, metric_names)
         metric_names = [name for name in metric_names if name in df.columns]
         if len(df) is 0:
@@ -123,7 +123,7 @@ def metrics(exp_db, conf, sweep, value, args):
         del select[args.xaxis]
         ids = exp_db.get_ids_dict(select)
         if ids is None:
-            raise RuntimeError('No corresponding metrics available')
+            raise RuntimeError('No corresponding metrics available', select)
         df = get_xy(ids, exp_db, metric_names, args.xaxis)
         if len(df) is 0:
             raise RuntimeError('No corresponding metrics available')
@@ -232,9 +232,9 @@ def plot_single_metric_xaxis(df, x_axis, metric, **plotargs):
     y = [mean for mean, std in df[metric]]
     yerr = [std for mean, std in df[metric]]
     plt.errorbar(x, y, yerr, marker='o', **plotargs)
-    if max(y)/min(y) > 1e2:
+    if max(y)/min(y) > 1e2 and np.all(y > 0):
         plt.yscale('log')
-    if max(x)/min(x) > 1e2:
+    if max(x)/min(x) > 1e2 and np.all(x > 0): 
         plt.xscale('log')
     plt.title(metric.replace('_', ' '), fontsize='small')
     plt.yticks(fontsize='small')
