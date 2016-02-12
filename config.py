@@ -128,7 +128,7 @@ class MixedConfig(Config, EnsembleConfig):
         if par in self.RS_args:
             self.RS_args[par] = value
             if self.is_MF:
-                self.MF_type = self.RS_type.__MF_type__
+                self.MF_type = self.RS_type.__MF_type__.__name__
                 self.MF_args = self.RS_type.__MF_args__(self.RS_args)
         elif par in self.Ens_args:
             self.Ens_args[par] = value
