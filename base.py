@@ -144,14 +144,33 @@ class SavedRecommendations(RatingPredictor):
         self.config = None
         self.database = None
 
-    def save(self, filepath, RS):
+    def candidate_items(self, user, n_items, split):
+        candidates = None
+        if n_items > 2000:
+            hidden_items = [i for i,r in split.valid[user] + split.test[user] \
+                + split.tuning[user]]
+            n_candidates = int(0.01*n_items + 2000) \
+                - len(hidden_items)
+            np.random.seed(user + sum(hidden_items))
+            candidates = [item for item in range(n_items)
+                          if item not in hidden_items]
+            candidates = hidden_items + \
+                np.random.choice(candidates, size=n_candidates,
+                                 replace=False).tolist()
+        return candidates
+
+    def save(self, filepath, RS, split):
         lists = {}
         for user in range(RS.database.n_users()):
+            candidates = self.candidate_items(user, RS.database.n_items(),
+                                              split)
             # ask for recommendations w/ threshold=0
             # to get all the predratings
-            lists[user] = RS.recommend(user, threshold=0)
+            lists[user] = RS.recommend(user, threshold=0,
+                                       candidate_items=candidates)
             config = RS.config()
-            print('user', user+1, 'of', RS.database.n_users(), end='\r', flush=True)
+            print('user', user+1, 'of', RS.database.n_users(), end='\r',
+                  flush=True)
         print('Saving', filepath)
         to_gzpickle((lists, config), filepath)
         print('Done!')
@@ -171,17 +190,17 @@ class SavedRecommendations(RatingPredictor):
                   candidate_items=None):
         if candidate_items is not None:
             candidate_items = set(candidate_items)
-            rec_list = self.lists[target_user]
-            out_list = []
-            count = 0
-            for item, rating in rec_list:
-                if item in candidate_items and rating > threshold:
-                    out_list.append((item, rating))
-                    count += 1
-                if count >= how_many:
-                    break
-        else:
-            out_list = self.lists[target_user]
+        rec_list = self.lists[target_user]
+        out_list = []
+        count = 0
+        for item, rating in rec_list:
+            if ((candidate_items is not None and item in candidate_items)
+                or candidate_items is None) and rating > threshold:
+                out_list.append((item, rating))
+                count += 1
+            if count >= how_many:
+                break
+
         return out_list
 
 

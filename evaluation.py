@@ -79,7 +79,7 @@ def rec_save(RS, out_filepath, split, final=False):
         out_name = out_filepath+FINAL_REC_SUFFIX
     print('Recommending', out_name)
     rec = SavedRecommendations()
-    rec.save(out_name, RS)
+    rec.save(out_name, RS, split)
     print('Done!')
 
 
@@ -114,7 +114,7 @@ def ensemble_rec_save(ens, out_filepath, split, final=False):
         ens.load(out_filepath+FINAL_TRAIN_SUFFIX, split.train)
         out_name = out_filepath+FINAL_REC_SUFFIX
     print('Recommending', out_name)
-    rec.save(out_name, ens)
+    rec.save(out_name, ens, split)
     print('Done!')
 
 
@@ -182,13 +182,12 @@ class Metrics(object):
         self.metrics = dict()
 
     def _rlist_single_user(self, user_id, threshold):
-        hidden_items = [i_id for i_id, rating in self.test_set[user_id]]
-        candidate_items = list(self.split.train.get_unrated_items(user_id)) \
-            + hidden_items
-
+        candidates = self.RS.candidate_items(user_id,
+                                             self.RS.config['n_items'],
+                                             self.split)
         rlist = self.RS.recommend(user_id,
                                   threshold=threshold,
-                                  candidate_items=candidate_items)
+                                  candidate_items=candidates)
         return rlist
 
     def _hits_atN(self, user_id, rlist, atN, threshold):
@@ -224,7 +223,8 @@ class Metrics(object):
             rlist = self._rlist_single_user(user_id, threshold)
             for atN in Metrics.__atN__:
                 hits = self._hits_atN(user_id, rlist, atN, threshold)
-                r = hits/len(self.test_set[user_id])
+                test_size = len(self.test_set[user_id])
+                r = hits/test_size if test_size != 0 else 0
                 p = hits/atN
                 if r+p > 0:
                     f1 = 2*r*p/(r+p)
