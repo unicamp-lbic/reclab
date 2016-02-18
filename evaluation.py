@@ -83,7 +83,7 @@ def rec_save(RS, out_filepath, split, final=False):
     print('Done!')
 
 
-def ensemble_train_save(ens, out_filepath, split, final=False):
+def ensemble_train_save(ens, out_filepath, split, final=False, save=True):
     if final:
         for user in split.valid:
             for item, rating in split.valid[user]:
@@ -94,13 +94,13 @@ def ensemble_train_save(ens, out_filepath, split, final=False):
         out_name = out_filepath+TRAIN_SUFFIX
     else:
         out_name = out_filepath+FINAL_TRAIN_SUFFIX
-    print('Saving', out_name)
-    ens.save(out_name)
+    if save:
+        print('Saving', out_name)
+        ens.save(out_name)
     print('Done!')
 
 
-
-def ensemble_rec_save(ens, out_filepath, split, final=False):
+def ensemble_rec_save(ens, out_filepath, split, final=False, load=True):
     if final:
         for user in split.valid:
             for item, rating in split.valid[user]:
@@ -108,10 +108,12 @@ def ensemble_rec_save(ens, out_filepath, split, final=False):
     rec = SavedRecommendations()
     print('Loading model')
     if not final:
-        ens.load(out_filepath+TRAIN_SUFFIX, split.train)
+        if load:
+            ens.load(out_filepath+TRAIN_SUFFIX, split.train)
         out_name = out_filepath+REC_SUFFIX
     else:
-        ens.load(out_filepath+FINAL_TRAIN_SUFFIX, split.train)
+        if load:
+            ens.load(out_filepath+FINAL_TRAIN_SUFFIX, split.train)
         out_name = out_filepath+FINAL_REC_SUFFIX
     print('Recommending', out_name)
     rec.save(out_name, ens, split)
