@@ -44,7 +44,7 @@ def _get_zero_mean_matrix(matrix, along='users'):
                     -= mean_vals[i]
             else:
                 non_zero_pos = matrix[:, i] > 0
-                non_zero = matrix[non_zero_pos, :]
+                non_zero = matrix[non_zero_pos, i]
                 mean = np.mean(non_zero)
                 mean_vals[i] = mean if not np.isnan(mean) else 0
                 matrix[non_zero_pos, i] -= mean_vals[i]
