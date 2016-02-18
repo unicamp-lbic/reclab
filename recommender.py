@@ -391,11 +391,12 @@ class BMFRPrecommender(BMFrecommender):
             self.Q = tfidf.fit_transform(self.Q)
 
         elif self.weighting == 'factors':
+            I = self.database.get_matrix(threshold=self.bin_threshold, sparse=True)
             if self.neighbor_type == 'user':
-                self.P = np.dot(self.P, self.Q.T) \
+                self.P = np.dot(I, self.Q) \
                     /np.tile(self.Q.sum(axis=0), (self.P.shape[0], 1))
             elif self.neighbor_type == 'item':
-                self.Q = np.dot(self.Q, self.P.T) \
+                self.Q = np.dot(I.T, self.P) \
                     /np.tile(self.P.sum(axis=0), (self.Q.shape[0], 1))
 
         if self.dim_red != 'auto':

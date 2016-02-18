@@ -57,6 +57,7 @@ def arg_parsing(args=None):
 
     parser.add_argument('--notify', action='store_true')
     parser.add_argument('--final', action='store_true')
+    parser.add_argument('--use_model', action='store_true')
 
 
     args = parser.parse_args(args)
@@ -193,7 +194,9 @@ def run_sweep(args, conf, exp_db, ensemble_conf=None):
         elif ensemble_conf is not None:
             run_ensemble(args, conf, ensemble_conf, exp_db)
         else:
+            print('Running for params', param_set)
             run_exp(args, conf, exp_db)
+            print('Done!', param_set)
 
 
 
@@ -374,21 +377,27 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
             for v in values:
                 conf.set_par(varpar, v)
                 single_exp_id = exp_db.get_id(conf)
-                filepath = exp_db.get_fold_arg_val(single_exp_id, fold, ('final_'*args.final) + 'train_file_prefix')
-                RS = conf.RS_type(**conf.RS_args)
-                if args.ensemble is not None:
-                    evalu.load_model(RS, filepath, split)
+                if args.use_model:
+                    filepath = exp_db.get_fold_arg_val(single_exp_id, fold, 'train_file_prefix')
+                    RS = conf.RS_type(**conf.RS_args)
+                    evalu.load_model(RS, filepath, split, args.final)
+                else:
+                    filepath = exp_db.get_fold_arg_val(single_exp_id, fold, 'rec_file_prefix')
+                    RS = evalu.load_recommendations(filepath, args.final)
                 RS_list.append(RS)
             ens.RS_list = RS_list
+            save = True if args.action.find('rec') == -1 or args.use_model  else False
             t0 = time.time()
-            evalu.ensemble_train_save(ens, FOLD_PATH, split)
+            evalu.ensemble_train_save(ens, FOLD_PATH, split, final=args.final, save=save)
             tr_dt = time.time() - t0
-            exp_db.set_fold_arg_val(EXP_ID, fold, ('final_'*args.final) + 'train_file_prefix', FOLD_PATH)
+            if save:
+                exp_db.set_fold_arg_val(EXP_ID, fold, ('final_'*args.final) + 'train_file_prefix', FOLD_PATH)
             exp_db.set_fold_arg_val(EXP_ID, fold, ('final_'*args.final) + 'train_time', tr_dt)
 
         if args.action.find('rec') > -1:
+            load = True if args.action.find('train') == -1 else False
             t0 = time.time()
-            evalu.ensemble_rec_save(ens, FOLD_PATH, split)
+            evalu.ensemble_rec_save(ens, FOLD_PATH, split, final=args.final, load=load)
             tst_dt = time.time() - t0
             exp_db.set_fold_arg_val(EXP_ID, fold, ('final_'*args.final) + 'rec_file_prefix', FOLD_PATH)
             exp_db.set_fold_arg_val(EXP_ID, fold, ('final_'*args.final) + 'rec_time', tst_dt)
@@ -513,6 +522,7 @@ def run_plot(args, exp_db):
 
     plot_name = '-'.join(plot_name)
     plt.savefig('./results/' + plot_name + '.eps')
+    plt.savefig('./results/' + plot_name + '.pgf')
     plt.savefig('./results/' + plot_name + '.png')
     plt.show()
 

@@ -15,6 +15,7 @@ import evaluation as evalu
 
 matplotlib.rcParams['ps.useafm'] = True
 matplotlib.rcParams['pdf.use14corefonts'] = True
+matplotlib.rcParams['pgf.texsystem'] = 'pdflatex'
 colors = ['royalblue', 'forestgreen', 'firebrick', 'darkorange', 'navy', 'hotpink', 'darkturquoise', 'darkviolet', 'gray', 'gold', 'yellowgreen']
 markers = ['o', '^', 's', '>', 'D', '<', '*','v','p','+','x']
 plt.rc('axes', prop_cycle=(cycler('color', colors) +
@@ -228,10 +229,11 @@ def plot_metrics_xaxis(dataframe, x_axis, metrics,
 
 def plot_single_metric_xaxis(df, x_axis, metric, **plotargs):
     df.sort(x_axis, inplace=True)
-    x = df[x_axis]
-    y = [mean for mean, std in df[metric]]
-    yerr = [std for mean, std in df[metric]]
-    plt.errorbar(x, y, yerr, marker='o', **plotargs)
+    x = np.array(df[x_axis])
+    y = np.array([mean for mean, std in df[metric]])
+    yerr = np.array([std for mean, std in df[metric]])
+    plotargs.update(next(plt.gca()._get_lines.prop_cycler))
+    plt.errorbar(x, y, yerr, **plotargs)
     if max(y)/min(y) > 1e2 and np.all(y > 0):
         plt.yscale('log')
     if max(x)/min(x) > 1e2 and np.all(x > 0): 
