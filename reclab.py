@@ -386,7 +386,7 @@ def run_ensemble(args, conf, ensemble_conf, exp_db):
                     RS = evalu.load_recommendations(filepath, args.final)
                 RS_list.append(RS)
             ens.RS_list = RS_list
-            save = True if args.action.find('rec') == -1 else False
+            save = True if args.action.find('rec') == -1 or args.use_model  else False
             t0 = time.time()
             evalu.ensemble_train_save(ens, FOLD_PATH, split, final=args.final, save=save)
             tr_dt = time.time() - t0
