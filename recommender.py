@@ -211,6 +211,28 @@ class MFrecommender(RatingPredictor):
 
 
 class MFNNrecommender(MFrecommender):
+    def __init__(self, neighbor_type='user', offline_kNN=False,
+                 bin_threshold=0, min_coverage=1.0, weighting='none',
+                 n_neighbors=10, algorithm='brute', metric='cosine',
+                 model_size=0.8, **kNN_args):
+        self.database = None
+        self.weighting = weighting
+        self.metric = metric
+        self.neighbor_type = neighbor_type
+        self.bin_threshold = bin_threshold
+        self.min_coverage = min_coverage
+        self.P = None
+        self.Q = None
+        self.n_neighbors = n_neighbors
+        self.model_size = model_size
+        # create a random seed that will be the same for a certain BMF,
+        # to allow fair comparisons among other params
+        self.kNN = \
+            neighbors.kNN(n_neighbors=n_neighbors,
+                          algorithm=algorithm, metric=metric, **kNN_args)
+        self.offline_kNN = offline_kNN
+        self.kNN_graph = None
+
     def predict(self, target_user, target_item):
         if self.neighbor_type == 'user':
             if np.isscalar(target_user):
@@ -273,30 +295,15 @@ class BMFrecommender(MFNNrecommender, NeighborStrategy, PredictionStrategy):
         args = ['min_coverage', 'bin_threshold']
         return dict([(arg, RS_args[arg]) for arg in args])
 
-    def __init__(self, neighbor_type='user', offline_kNN=False,
-                 bin_threshold=0, min_coverage=1.0, weighting='none',
-                 n_neighbors=10, algorithm='brute', metric='cosine',
-                 model_size=0.8, **kNN_args):
-        self.database = None
-        self.weighting = weighting
-        self.metric = metric
-        self.neighbor_type = neighbor_type
+    def __init__(self, bin_threshold=0, min_coverage=1.0, **kargs):
+        MFNNrecommender.__init__(self, **kargs)
         self.bin_threshold = bin_threshold
         self.min_coverage = min_coverage
-        self.P = None
-        self.Q = None
-        self.n_neighbors = n_neighbors
-        self.model_size = model_size
         # create a random seed that will be the same for a certain BMF,
         # to allow fair comparisons among other params
         self.seed = int(str(min_coverage).replace('.','') \
             + str(bin_threshold)) + RANDOM_SEED
         np.random.RandomState(self.seed)
-        self.kNN = \
-            neighbors.kNN(n_neighbors=n_neighbors,
-                          algorithm=algorithm, metric=metric, **kNN_args)
-        self.offline_kNN = offline_kNN
-        self.kNN_graph = None
 
     def transform(self, user_vector):
         raise NotImplementedError()
@@ -474,13 +481,9 @@ class SVDrecommender(MFrecommender):
 
 
 class SVDNNrecommender(SVDrecommender, MFNNrecommender):
-    def __init__(self, n_neighbors=20, model_size=1, offline_kNN=True,
-                 dim=10, regularization=0.1):
+    def __init__(self, dim=10, regularization=0.1, **kargs):
+        MFNNrecommender.__init__(self, **kargs)
         SVDrecommender.__init__(self, dim, regularization)
-        self.n_neighbors = n_neighbors
-        self.model_size = model_size
-        self.kNN = None
-        self.offline_kNN = self.offline_kNN
 
     def fit(self, database):
         SVDrecommender.fit(self, database)

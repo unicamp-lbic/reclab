@@ -169,7 +169,7 @@ dummydelicious = Config(
 IB5fold = Config(
     database='ml100k',
     RS_type=rec.ItemBased,
-    RS_args={'n_neighbors': 20,
+    RS_args={'n_neighbors': 10,
              'model_size': 1.0,
              'algorithm': 'brute',
              'metric': 'cosine',
@@ -180,6 +180,24 @@ IB5fold = Config(
     threshold=3,
     pct_hidden=0.2
 )
+
+IBLSH5fold = Config(
+    database='ml100k',
+    RS_type=rec.ItemBased,
+    RS_args={'n_neighbors': 10,
+             'model_size': 1.0,
+             'algorithm': 'LSH',
+             'n_candidates': 2,
+             'n_estimators': 10,
+             'metric': 'cosine',
+             'offline_kNN': True,
+             'weighting': 'none'},
+    nfolds=5,
+    is_MF=False,
+    threshold=3,
+    pct_hidden=0.2
+)
+
 
 IBdelicious = Config(
     database='delicious',
@@ -410,9 +428,9 @@ SVDdelicious = Config(
 
 SVDNN5fold = Config(
     database='ml100k',
-    RS_type=rec.SVDrecommender,
+    RS_type=rec.SVDNNrecommender,
     RS_args={'dim': 10,
-             'regularization': 0.01,
+             'regularization': 0.8,
              'n_neighbors': 30,
              'model_size': 1.0,
              'neighbor_type': 'user',
@@ -428,7 +446,7 @@ SVDNN5fold = Config(
 
 SVDNNdelicious = Config(
     database='delicious',
-    RS_type=rec.SVDrecommender,
+    RS_type=rec.SVDNNrecommender,
     RS_args={'dim': 50,
              'regularization': 0.01,
              'n_neighbors': 30,
@@ -453,7 +471,7 @@ LinReg = EnsembleConfig(
     Ens_type=ens.LinRegRatingEnsemble,
     Ens_args={'ens_reg': 1.0,
               'l1_ratio': 0.1,
-              'keep': 0.25}
+              'keep': 0.5}
 )
 
 Voting = EnsembleConfig(
@@ -473,9 +491,11 @@ valid_configs = {
     'BMFRPLSH5fold': BMFRPLSH5fold,
     'BMFRP5fold': BMFRP5fold,
     'IB5fold': IB5fold,
+    'IBLSH5fold': IBLSH5fold,
     'dummy5fold': dummy5fold,
     'UB5fold': UB5fold,
     'SVD5fold': SVD5fold,
+    'SVDNN5fold': SVDNN5fold,
     'BMFdelicious': BMFdelicious,
     'BMFLSHdelicious': BMFLSHdelicious,
     'BMFRPLSHdelicious': BMFRPLSHdelicious,
