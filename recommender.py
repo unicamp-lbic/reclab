@@ -34,8 +34,8 @@ class NeighborStrategy(object):
         if self.metric == 'cosine':
             similarities = oneD((1.0 - distances))
         elif self.metric == 'correlation':
-            similarities = - distances
-
+            similarities = oneD((1.0 - distances))
+            np.place(similarities, similarities < 0, [0])
         return (ratings, similarities)
 
     def _user_strategy(self, target_item, distances, indices,
@@ -48,7 +48,9 @@ class NeighborStrategy(object):
         if self.metric == 'cosine':
             similarities = oneD((1.0 - distances))
         elif self.metric == 'correlation':
-            similarities = - distances
+            similarities = oneD((1.0 - distances))
+            np.place(similarities, similarities < 0, [0])
+
 
         return (ratings, similarities)
 
