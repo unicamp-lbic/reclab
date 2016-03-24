@@ -26,8 +26,8 @@ config.MixedConfig(config.BMFRP5fold.copy(), config.LinReg.copy(),
                    'dim_red', [str(n) for n in np.arange(0.1,0.31,0.02)])]
 
 
-# for i, _ in enumerate(configs):
-#     configs[i].set_par('database', 'TestDB')
+for i, _ in enumerate(configs):
+    configs[i].set_par('database', 'TestDB')
 edb = expdb.ExperimentDB()
 
 def make_section():
@@ -51,8 +51,15 @@ def make_section():
                     if edb.db['algorithm'].loc[eid].values[0] == 'LSH':
                         s += '+LSH'
                 else:
-                    v = edb.db[f].loc[eid]
-                    s = fmts[i_f]%(v.mean()) + ' $\pm$ ' + fmts[i_f]%(v.std())
+                    if f.find('train_time') > -1 and conf.is_MF:
+                        train = edb.db[f].loc[eid].values
+                        MF = edb.db[f.replace('train', 'MF')].loc[eid].values
+                        v = np.nansum(np.vstack([train, MF]), axis=0)
+                        print(train, MF, v)
+                    else:
+                        v = edb.db[f].loc[eid]
+                    s = fmts[i_f]%(np.nanmean(v)) + ' $\pm$ ' + \
+                        fmts[i_f]%(np.nanstd(v))
                 line += s + ' & '
             line = line[:-2]
             line += '\\\\ \n'
