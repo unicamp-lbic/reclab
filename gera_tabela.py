@@ -26,8 +26,8 @@ config.MixedConfig(config.BMFRP5fold.copy(), config.LinReg.copy(),
                    'dim_red', [str(n) for n in np.arange(0.1,0.31,0.02)])]
 
 
-for i, _ in enumerate(configs):
-    configs[i].set_par('database', 'TestDB')
+# for i, _ in enumerate(configs):
+#     configs[i].set_par('database', 'TestDB')
 edb = expdb.ExperimentDB()
 
 def make_section():
@@ -55,7 +55,6 @@ def make_section():
                         train = edb.db[f].loc[eid].values
                         MF = edb.db[f.replace('train', 'MF')].loc[eid].values
                         v = np.nansum(np.vstack([train, MF]), axis=0)
-                        print(train, MF, v)
                     else:
                         v = edb.db[f].loc[eid]
                     s = fmts[i_f]%(np.nanmean(v)) + ' $\pm$ ' + \
