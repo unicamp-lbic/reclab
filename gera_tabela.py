@@ -71,12 +71,12 @@ fmts = [None, '%d', '%d', '%0.3f', '%0.3f']
 table = '\hline \n'
 for model_size in ['1','0.5','0.3']:
     table += '\multicolumn{5}{|c|}{$l=' + (1-int(float(model_size)))*model_size \
-        + '|U|$} \\\\ \n'
+        + '|U|$} \\\\\hline\n'
     for i_c, c in enumerate(configs):
         configs[i_c].set_par('model_size', model_size)
     make_section()
     table += '\hline \n'
-header = '\hline\nMétodo & Tempo treinamento & Tempo recomendação & P@20 & RMSE\\\\\hline\n'
+header = '\hline\nMétodo & Tempo treinamento & Tempo recomendação & P@20 & RMSE\\\\\n'
 table = header + table
 print(table)
 
